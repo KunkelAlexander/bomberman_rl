@@ -19,7 +19,7 @@ config = {
     "exploration"         : 1.0,    # Initial exploration rate
     "exploration_decay"   : 1e-3,   # Decrease of exploration rate for every action
     "exploration_min"     : 0.2,
-    "learning_rate"       : 1e-1,
+    "learning_rate"       : 1e-3,
     "learning_rate_decay" : 1,
     "randomise_order"     : False,  # Randomise starting order of agents for every game
     "only_legal_actions"  : True,   # Have agents only take legal actions
@@ -107,7 +107,27 @@ def first_dir_bfs(start, goals, arena, bombs, others):
             seen.add((nx, ny))
             Q.append(((nx, ny), d if first is None else first))
     return 0
+"""
+| Field                      | Values               | Bits        | Comment             |
+| -------------------------- | -------------------- | ----------- | ------------------- |
+| **DANGER now**             | 0/1                  | 1           | as before           |
+| **SAFE-move mask** U R D L | 16                   | 4           | 1 = walkable & safe |
+| **DIR to nearest *crate*** | 0 = none, 1-4 = URDL | **3**       | BFS first-step      |
+| **DIR to nearest *enemy*** | 0/1-4                | **3**       | BFS first-step      |
+| **DIR to nearest *coin***  | 0/1-4                | **3**       | BFS first-step      |
+| **BOMB available**         | 0/1                  | 1           | as before           |
+| **Total**                  | –                    | **15 bits** | 2¹⁵ = 32 768 states |
 
+bit 14  13‒11  10‒8   7‒5    4‒1    0
+      ─┬─────┬─────┬──────┬──────┬────
+       │ coin │enemy│crate │ safe │DANGER
+       │ dir  │ dir │ dir  │mask  │
+BOMB-avail is now the **top** bit (14)
+
+dir code: 0 = none / 1 = Up / 2 = Right / 3 = Down / 4 = Left
+
+32 768
+"""
 # ---------------------------------------------------------------------------
 def state_to_features(game_state):
     if game_state is None:
@@ -139,7 +159,7 @@ def state_to_features(game_state):
     crates  = {(cx, cy) for cx in range(rows) for cy in range(cols) if arena[cx, cy] == 1}
     enemies = {pos for *_n, pos in others}
 
-    crate_dir = first_dir_bfs((x, y), crates,   arena, bombs, others)   # 0-4
+    crate_dir = first_dir_bfs((x, y), crates,  arena, bombs, others)   # 0-4
     enemy_dir = first_dir_bfs((x, y), enemies, arena, bombs, others)   # 0-4
     coin_dir  = first_dir_bfs((x, y), coins,   arena, bombs, others)   # 0-4
 

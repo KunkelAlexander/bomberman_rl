@@ -58,7 +58,7 @@ def get_legal_actions(game_state) -> np.ndarray:
 
     # BOMB: at least one bomb left *and* no bomb already on current tile
     if bombs_left > 0 and all((bx, by) != (x, y) for (bx, by), _ in bombs):
-        pass# Ignore bombs for nowlegal.append(ACTION_STRING_TO_ID['BOMB'])
+        legal.append(ACTION_STRING_TO_ID['BOMB'])
 
     return np.array(legal, dtype=int)
 
