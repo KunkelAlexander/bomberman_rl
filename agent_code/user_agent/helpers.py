@@ -1,77 +1,159 @@
-import os
-import pickle
-import random
-
 import numpy as np
+from .config import ACTION_STRING_TO_ID, N_ACTIONS   # (‘UP’, ‘RIGHT’, ‘DOWN’, ‘LEFT’, ‘WAIT’, ‘BOMB’)
 
-from .agent_tabular_q import TabularQAgent
-
-from .config import ACTIONS, N_ACTIONS, N_STATES
-from .helpers import get_legal_actions, ascii_pictogram
-
-config = {
-    "n_episode"           : 50000,   # Number of training episodes
-    "n_eval"              : 100,    # Number of evaluation episodes every eval_freq training episodes
-    "eval_freq"           : 1000,
-    "train_freq"          : 1,      # Train models every train_freq training episodes
-    "discount"            : 0.8,   # Discount in all Q learning algorithms
-    "learning_rate_decay" : 1,
-    "exploration"         : 1.0,    # Initial exploration rate
-    "exploration_decay"   : 1e-3,   # Decrease of exploration rate for every action
-    "exploration_min"     : 0.2,
-    "learning_rate"       : 1e-2,
-    "learning_rate_decay" : 1,
-    "randomise_order"     : False,  # Randomise starting order of agents for every game
-    "only_legal_actions"  : True,   # Have agents only take legal actions
-    "debug"               : False,  # Print loss and evaluation information during training
-    "initial_q"           : 0.6,    # Initial Q value for tabular Q learning
+DIR2VEC = {
+    'UP'   : ( 0, -1),
+    'RIGHT': ( 1,  0),
+    'DOWN' : ( 0,  1),
+    'LEFT' : (-1,  0),
 }
 
-def setup(self):
+def get_legal_actions(game_state) -> np.ndarray:
     """
-    Setup your code. This is called once when loading each agent.
-    Make sure that you prepare everything such that act(...) can be called.
-
-    When in training mode, the separate `setup_training` in train.py is called
-    after this method. This separation allows you to share your trained agent
-    with other students, without revealing your training code.
-
-    In this example, our model is a set of probabilities over actions
-    that are is independent of the game state.
-
-    :param self: This object is passed to all callbacks and you can set arbitrary values.
+    Return the list of ACTION IDs that are *physically legal* in the current Bomberman state.
+    Legal = the move keeps you on the board, lands on a free tile (0 in `arena`)
+            with no bomb and no other agent occupying it.
+            'WAIT' is always legal.
+            'BOMB' is legal iff you still have bombs_left and no bomb already on your tile.
+    Explosion/danger is NOT checked here – leave that to the policy.
     """
+    # If we have no game state (first call or game over)--everything is allowed.
+    if game_state is None:
+        return np.arange(N_ACTIONS)
 
-    self.agent = TabularQAgent(
-            agent_id=0,
-            n_actions=N_ACTIONS,
-            n_states=N_STATES,
-            config=config,
-    )
+    arena      = game_state["field"]          # 2-D int8 array, -1: wall, 1: crate, 0: free
+    bombs      = game_state["bombs"]          # [((x, y), timer), …]
+    others     = game_state["others"]         # [(name, score, bombs_left, (x, y)), …]
+    name, score, bombs_left, (x, y) = game_state["self"]
+    rows, cols = arena.shape
 
-    if not self.train and os.path.isfile("q-tables/q-table_190.pt.npz"):
-        print("loadu")
-        self.logger.info("Loading model from saved state.")
-        self.agent.q = np.load("q-tables/q-table_190.pt.npz")["q"]
+    # ----- helpers -----------------------------------------------------------
+    def in_bounds(cx, cy):
+        return 0 <= cx < rows and 0 <= cy < cols
 
+    def tile_is_free(cx, cy):
+        """Free = no wall/crate, no bomb, no other agent."""
+        if not in_bounds(cx, cy):
+            return False
+        if arena[cx, cy] != 0:                # wall or crate
+            return False
+        for (bx, by), _ in bombs:
+            if bx == cx and by == cy:
+                return False
+        for *_ignore, (ox, oy) in others:
+            if ox == cx and oy == cy:
+                return False
+        return True
+    # -------------------------------------------------------------------------
 
-def act(self, game_state: dict) -> str:
+    legal = []
+
+    # Movement actions
+    for act, (dx, dy) in DIR2VEC.items():
+        if tile_is_free(x + dx, y + dy):
+            legal.append(ACTION_STRING_TO_ID[act])
+
+    # WAIT is always legal
+    legal.append(ACTION_STRING_TO_ID['WAIT'])
+
+    # BOMB: at least one bomb left *and* no bomb already on current tile
+    if bombs_left > 0 and all((bx, by) != (x, y) for (bx, by), _ in bombs):
+        legal.append(ACTION_STRING_TO_ID['BOMB'])
+
+    return np.array(legal, dtype=int)
+
+###############################################################################
+# debug_vis.py
+###############################################################################
+def ascii_pictogram(game_state: dict) -> str:
     """
-    Your agent should parse the input, think, and take a decision.
-    When not in training mode, the maximum execution time for this method is 0.5s.
-
-    :param self: The same object that is passed to all of your callbacks.
-    :param game_state: The dictionary that describes everything on the board.
-    :return: The action to take as a string.
+    Build a human-readable ASCII map for quick visual debugging.
+    Legend
+        # : indestructible wall          (-1 in arena)
+        + : crate                        ( 1 in arena)
+          : free tile                    ( 0 in arena)
+        A : *your* agent
+        O : other agent
+        C : coin
+        B : bomb  (timer shown as digit 1-4)
+        x : tile that will explode next tick   (explosion_map[x,y] > 0)
     """
+    if game_state is None:
+        return "<no board yet>"
 
-    features = state_to_features(game_state)
+    arena      = game_state["field"]
+    bombs      = {pos: t for pos, t in game_state["bombs"]}
+    coins      = {tuple(c) for c in game_state["coins"]}
+    explosions = game_state["explosion_map"]
+    me_name, *_ignore, (ax, ay) = game_state["self"]
+    others     = {tuple(o[-1]) for o in game_state["others"]}
 
-    #Debugging
-    #print(f"Feature bits: {features:015b}")      # 10-bit binary
-    #print(ascii_pictogram(game_state))
+    rows, cols = arena.shape
+    pict = []
 
-    return ACTIONS[self.agent.act(features, actions=get_legal_actions(game_state=game_state))]
+    for y in range(cols):              # NOTE: arena is (x,y); y=rows is vertical axis
+        row_chars = []
+        for x in range(rows):
+            ch = " "
+            if arena[x, y] == -1:       ch = "#"
+            elif arena[x, y] ==  1:     ch = "+"
+            if explosions[x, y] > 0:    ch = "x"
+            if (x, y) in coins:         ch = "C"
+            if (x, y) in others:        ch = "O"
+            if (x, y) == (ax, ay):      ch = "A"
+            if (x, y) in bombs:
+                timer = min(bombs[(x, y)], 4)   # clip to 4 so it fits in one char
+                ch = str(timer) if ch == " " else ch
+            row_chars.append(ch)
+        pict.append("".join(row_chars))
+    return "\n".join(pict)
+
+###############################################################################
+# debug_vis.py
+###############################################################################
+DIRS = ["Up", "Right", "Down", "Left"]          # index 0-3
+
+def _decode_dir(code: int) -> str:
+    """0-4 → human-readable direction"""
+    return "None" if code == 0 else DIRS[code - 1]
+DIRS = ["Up", "Right", "Down", "Left"]          # 0-3 → URDL
+
+def _decode_dir(code: int) -> str:
+    """0-4 → None / Up / Right / …"""
+    return "None" if code == 0 else DIRS[code - 1]
+
+def _decode_safe(code: int) -> str:
+    """0-5 → human text for the SAFE_DIR field."""
+    table = {
+        0: "!!! no safe option (tile lethal)",
+        1: "WAIT is safe",
+        2: "Up",
+        3: "Right",
+        4: "Down",
+        5: "Left",
+    }
+    return table.get(code, "reserved")
+
+# ┌ bit 12 ────────────── bit 0 ┐
+# │b│ coin │ enemy │ crate │SAFE│
+# │ │ 11-9 │ 8-6   │ 5-3   │2-0 │
+def describe_state(state_id: int) -> str:
+    safe_dir   =  state_id        & 0b111          # 0-5
+    crate_dir  = (state_id >> 3)  & 0b111          # 0-4
+    enemy_dir  = (state_id >> 6)  & 0b111
+    coin_dir   = (state_id >> 9)  & 0b111
+    bomb_avail =  bool(state_id >> 12)
+
+    lines = [
+        f"Raw bits         : {state_id:013b}",
+        f"Bomb available   : {'YES' if bomb_avail else 'no'}",
+        f"SAFE choice      : {_decode_safe(safe_dir)}",
+        f"Nearest crate    : {_decode_dir(crate_dir)}",
+        f"Nearest enemy    : {_decode_dir(enemy_dir)}",
+        f"Nearest coin     : {_decode_dir(coin_dir)}",
+    ]
+    return "\n".join(lines)
+
 
 
 
@@ -242,4 +324,3 @@ def state_to_features(game_state):
         safe_dir
     )
     return state_id
-

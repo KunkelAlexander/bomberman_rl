@@ -102,7 +102,7 @@ def reward_from_events(self, events: List[str]) -> int:
         e.KILLED_SELF:    -1.0,
         e.SURVIVED_ROUND:  1.0,
         e.GOT_KILLED:     -0.1,
-        e.BOMB_DROPPED:    0.02,
+        e.BOMB_DROPPED:    0.1,
         e.MOVED_DOWN:     -0.01,
         e.MOVED_UP:       -0.01,
         e.MOVED_LEFT:     -0.01,
