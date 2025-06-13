@@ -19,7 +19,7 @@ config = {
     "exploration"         : 1.0,    # Initial exploration rate
     "exploration_decay"   : 1e-3,   # Decrease of exploration rate for every action
     "exploration_min"     : 0.2,
-    "learning_rate"       : 1e-2,
+    "learning_rate"       : 1e-1,
     "learning_rate_decay" : 1,
     "randomise_order"     : False,  # Randomise starting order of agents for every game
     "only_legal_actions"  : True,   # Have agents only take legal actions
@@ -49,10 +49,10 @@ def setup(self):
             config=config,
     )
 
-    if not self.train and os.path.isfile("q-table.pt.npz"):
+    if not self.train and os.path.isfile("q-tables/q-table_990.pt.npz"):
         print("loadu")
         self.logger.info("Loading model from saved state.")
-        self.agent.q = np.load("q-table.pt.npz")["q"]
+        self.agent.q = np.load("q-tables/q-table_990.pt.npz")["q"]
 
 
 def act(self, game_state: dict) -> str:
@@ -162,7 +162,9 @@ def state_to_features(game_state: dict) -> int:
         safe_dirs.append(safe)
 
     # 5-8. Coin direction flags
-    if False:
+    USE_SHORTEST_PATH = True
+    if not USE_SHORTEST_PATH:
+        # Line of sight
         coin_dirs = [False, False, False, False]
         for cx, cy in coins:
             dx, dy = np.sign(cx - x), np.sign(cy - y)
