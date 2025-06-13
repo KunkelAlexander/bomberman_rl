@@ -54,9 +54,13 @@ class TabularQAgent(Agent):
         else:
             # Disable q-values of illegal actions
             illegal_actions = np.setdiff1d(np.arange(self.n_actions), actions)
-            self.q[state, illegal_actions] = -np.inf
-            best_actions = np.argwhere(self.q[state] == np.max(self.q[state]))
-            action = np.random.choice(best_actions.flatten())
+
+            # work on a copy, leave the table intact
+            q_row = self.q[state].copy()
+            q_row[illegal_actions] = -np.inf          # mask only in the copy
+
+            best = np.flatnonzero(q_row == q_row.max())
+            action = np.random.choice(best)
 
         # Decrease exploration rate
         self.exploration = np.min([self.exploration * (1-self.exploration_decay), self.exploration_min])
