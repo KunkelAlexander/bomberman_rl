@@ -8,18 +8,19 @@ from .agent_tabular_q import TabularQAgent
 
 from .config import ACTIONS, N_ACTIONS, N_STATES
 from .helpers import get_legal_actions, ascii_pictogram
+from .states_to_features import state_to_features, describe_state
 
 config = {
     "n_episode"           : 50000,   # Number of training episodes
     "n_eval"              : 100,    # Number of evaluation episodes every eval_freq training episodes
     "eval_freq"           : 1000,
     "train_freq"          : 1,      # Train models every train_freq training episodes
-    "discount"            : 0.8,   # Discount in all Q learning algorithms
+    "discount"            : 0.9,    # Discount in all Q learning algorithms
     "learning_rate_decay" : 1,
     "exploration"         : 1.0,    # Initial exploration rate
     "exploration_decay"   : 1e-3,   # Decrease of exploration rate for every action
-    "exploration_min"     : 0.2,
-    "learning_rate"       : 1e-2,
+    "exploration_min"     : 0.0,
+    "learning_rate"       : 0.05,
     "learning_rate_decay" : 1,
     "randomise_order"     : False,  # Randomise starting order of agents for every game
     "only_legal_actions"  : True,   # Have agents only take legal actions
@@ -49,10 +50,11 @@ def setup(self):
             config=config,
     )
 
-    if not self.train and os.path.isfile("q-tables/q-table_190.pt.npz"):
+
+    if not self.train and os.path.isfile("q-tables/q-table_1750.pt.npz"):
         print("loadu")
         self.logger.info("Loading model from saved state.")
-        self.agent.q = np.load("q-tables/q-table_190.pt.npz")["q"]
+        self.agent.q = np.load("q-tables/q-table_1750.pt.npz")["q"]
 
 
 def act(self, game_state: dict) -> str:
@@ -67,179 +69,10 @@ def act(self, game_state: dict) -> str:
 
     features = state_to_features(game_state)
 
-    #Debugging
-    #print(f"Feature bits: {features:015b}")      # 10-bit binary
-    #print(ascii_pictogram(game_state))
+    if not self.train:
+
+        features = state_to_features(game_state)
+        print(describe_state(features))
 
     return ACTIONS[self.agent.act(features, actions=get_legal_actions(game_state=game_state))]
-
-
-
-# features.py
-import numpy as np
-from collections import deque
-from settings import BOMB_POWER
-DIR_VECS = [(0, -1), (1, 0), (0, 1), (-1, 0)]          # URDL
-
-# ------------- helpers ------------------------------------------------------
-def in_bounds(x, y, rows, cols):
-    return 0 <= x < rows and 0 <= y < cols
-
-def is_free(nx, ny, arena, bombs, others):
-    return arena[nx, ny] == 0     \
-       and all((nx, ny) != pos for pos,_ in bombs) \
-       and all((nx, ny) != pos for *_n,pos in others)
-
-def first_dir_bfs(start, goals, arena, bombs, others):
-    """Return 0 (no goal) or 1-4 (URDL) for the nearest goal."""
-    if not goals:
-        return 0
-    rows, cols = arena.shape
-    Q = deque([(start, None)])
-    seen = {start}
-    while Q:
-        (cx, cy), first = Q.popleft()
-        if (cx, cy) in goals:
-            return 0 if first is None else first + 1   # +1 so Up=1 …
-        for d, (dx, dy) in enumerate(DIR_VECS):
-            nx, ny = cx + dx, cy + dy
-            if not in_bounds(nx, ny, rows, cols):  continue
-            if not is_free(nx, ny, arena, bombs, others): continue
-            if (nx, ny) in seen:                   continue
-            seen.add((nx, ny))
-            Q.append(((nx, ny), d if first is None else first))
-    return 0
-
-
-import numpy as np
-from settings import BOMB_POWER        # 3 by default
-
-def compute_blast_map(arena, bombs):
-    """
-    Returns an int array M where:
-        M[x,y] = smallest timer of any bomb that will blast (x,y)
-                 or 99 if no bomb reaches it.
-    """
-    rows, cols = arena.shape
-    INF = 99
-    M   = np.full((rows, cols), INF, dtype=np.int8)
-
-    for (bx, by), t in bombs:
-        for dx, dy in [(0,0), (1,0), (-1,0), (0,1), (0,-1)]:
-            for k in range(0 if dx==dy==0 else 1, BOMB_POWER+1):
-                x, y = bx + dx*k, by + dy*k
-                if not (0 <= x < rows and 0 <= y < cols):
-                    break
-                if arena[x, y] == -1:        # solid wall blocks blast and ray
-                    break
-                M[x, y] = min(M[x, y], t)
-                if arena[x, y] == 1:         # crate stops blast further on
-                    break
-    return M          # 0/1/2/3/4/… / 99
-# ---------------------------------------------------------------------------
-DIR_VECS  = [(0, -1), (1, 0), (0, 1), (-1, 0)]   # Up, Right, Down, Left
-#  2-5 are the SAFE_DIR codes for URDL
-DIR_CODE  = {v: i + 2 for i, v in enumerate(DIR_VECS)}
-
-def best_safe_dir(x, y, arena, bombs, expl_map, blast_map):
-    """
-    Return SAFE_DIR code:
-      0 = no survivable action (do the least-bad move later)
-      1 = WAIT is safe
-      2..5 = Up / Right / Down / Left  (best step)
-    """
-    rows, cols = arena.shape
-    t_here = blast_map[x, y]
-
-    # ------------------------------------------------ 1️⃣  WAIT?
-    # Wait only if the tile will stay intact ≥4 ticks (or never blows)
-    if expl_map[x, y] == 0 and (t_here >= 4 or t_here == 99):
-        return 1          # code for WAIT safe
-
-    # ------------------------------------------------ 2️⃣  Evaluate moves
-    best_code  = 0        # default: no safe move
-    best_timer = -1
-
-    for code, (dx, dy) in enumerate(DIR_VECS, start=2):   # Up=2 …
-        nx, ny = x + dx, y + dy
-        if not (0 <= nx < rows and 0 <= ny < cols):
-            continue
-        if arena[nx, ny] != 0 or expl_map[nx, ny] > 0:
-            continue
-        if any((nx, ny) == pos for pos, _ in bombs):
-            continue
-
-        t = blast_map[nx, ny]          # ticks before blast on that tile
-        if t == 0:                     # detonates next tick → skip
-            continue
-
-        # choose the neighbour with the *largest* timer
-        # ties broken by DIR_VECS order (Up > Right > Down > Left)
-        if t > best_timer:
-            best_timer, best_code = t, code
-
-    return best_code    # 0 if nothing beats certain death
-
-
-
-"""
-| Field                      | Values               | Bits        | Comment             |
-| -------------------------- | -------------------- | ----------- | ------------------- |
-| **DANGER now**             | 0/1                  | 1           | as before           |
-| **SAFE-move mask** U R D L | 16                   | 4           | 1 = walkable & safe |
-| **DIR to nearest *crate*** | 0 = none, 1-4 = URDL | **3**       | BFS first-step      |
-| **DIR to nearest *enemy*** | 0/1-4                | **3**       | BFS first-step      |
-| **DIR to nearest *coin***  | 0/1-4                | **3**       | BFS first-step      |
-| **BOMB available**         | 0/1                  | 1           | as before           |
-| **Total**                  | –                    | **15 bits** | 2¹⁵ = 32 768 states |
-
-bit 14  13‒11  10‒8   7‒5    4‒1    0
-      ─┬─────┬─────┬──────┬──────┬────
-       │ coin │enemy│crate │ safe │DANGER
-       │ dir  │ dir │ dir  │mask  │
-BOMB-avail is now the **top** bit (14)
-
-dir code: 0 = none / 1 = Up / 2 = Right / 3 = Down / 4 = Left
-
-32 768
-"""
-def state_to_features(game_state):
-    if game_state is None:
-        return None
-
-    arena      = game_state["field"]
-    bombs      = game_state["bombs"]
-    coins      = set(map(tuple, game_state["coins"]))
-    others     = game_state["others"]
-    expl_map   = game_state["explosion_map"]
-    name, score, bombs_left, (x, y) = game_state["self"]
-    rows, cols = arena.shape
-
-    blast_map  = compute_blast_map(arena, bombs)
-
-    # ---------- SAFE_DIR (0-5)
-    safe_dir = best_safe_dir(x, y, arena, bombs, expl_map, blast_map)
-
-    # ---------- nearest crate / enemy / coin  (0-4)
-    crates  = {(cx, cy) for cx in range(rows) for cy in range(cols)
-               if arena[cx, cy] == 1}
-    enemies = {pos for *_n, pos in others}
-
-    crate_dir = first_dir_bfs((x, y), crates,  arena, bombs, others)   # 0-4
-    enemy_dir = first_dir_bfs((x, y), enemies, arena, bombs, others)   # 0-4
-    coin_dir  = first_dir_bfs((x, y), coins,   arena, bombs, others)   # 0-4
-
-    # ---------- bomb availability bit
-    bomb_on_tile = any((bx, by) == (x, y) for (bx, by), _ in bombs)
-    bomb_avail   = int(bombs_left > 0 and not bomb_on_tile)            # 0/1
-
-    # ---------- pack into 13-bit int
-    state_id = (
-        (bomb_avail << 12) |
-        (coin_dir   << 9)  |
-        (enemy_dir  << 6)  |
-        (crate_dir  << 3)  |
-        safe_dir
-    )
-    return state_id
 

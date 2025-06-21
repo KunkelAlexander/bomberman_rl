@@ -4,6 +4,8 @@ from collections import deque
 
 from .agent_parent import Agent
 
+import pickle
+
 class TabularQAgent(Agent):
     def __init__(self, agent_id: int, n_actions: int, n_states: int, config: dict):
         """
@@ -29,14 +31,15 @@ class TabularQAgent(Agent):
         self.name                = f"table-q agent {agent_id}"
         self.training_data       = []
         self.training_episodes   = deque(maxlen=self.train_freq)
+        self.seen_states         = set()
 
-    def start_game(self, do_training: bool):
+    def start_game(self, is_training: bool):
         """
         Set whether the agent is in training mode and reset cumulative rewards.
 
         :param do_training: Set training mode of agent.
         """
-        super().start_game(do_training)
+        super().start_game(is_training)
         self.training_data = []
 
     def act(self, state, actions):
@@ -94,7 +97,7 @@ class TabularQAgent(Agent):
         super().final_update(reward)
 
         if self.is_training:
-            self.training_data[-1][self.DONE] = True
+            self.training_data[-1][self.DONE]    = True
             self.training_data[-1][self.REWARD] += reward
 
             self.validate_training_data()
@@ -131,6 +134,7 @@ class TabularQAgent(Agent):
                 if self.debug:
                     print(f"Iter {iteration}: q-value in state {state} before update: {self.q[state]} with reward {reward} and Game Over = {done}")
 
+                self.seen_states.add(state)
                 # Q-learning update rule
                 if done:
                     self.q[state][action] = reward
@@ -139,10 +143,21 @@ class TabularQAgent(Agent):
 
                 next_max = np.max(self.q[state])
 
+
                 if self.debug:
                     print(f"q-value in state {state} after update: {self.q[state]}")
 
             self.learning_rate *= self.learning_rate_decay
 
+        print("Seen ", len(self.seen_states), " out of ", self.q.shape[0], " states")
         # delete training episodes after training
         self.training_episodes = []
+
+    def save_transitions(self, filepath):
+        with open(filepath, 'wb') as f:
+            pickle.dump(list(self.training_episodes), f)
+
+    def load_transitions(self, filepath):
+        import pickle
+        with open(filepath, 'rb') as f:
+            self.training_episodes = pickle.load(f)
