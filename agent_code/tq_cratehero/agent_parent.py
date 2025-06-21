@@ -19,13 +19,13 @@ class Agent:
         self.name = f"agent {agent_id}"
         self.cumulative_reward = 0
 
-    def start_game(self, do_training: bool):
+    def start_game(self, is_training: bool):
         """
         Set whether the agent is in training mode and reset cumulative rewards.
 
         :param do_training: Set training mode of the agent.
         """
-        self.is_training = do_training
+        self.is_training = is_training
         self.cumulative_reward = 0
 
     def act(self, state, actions):

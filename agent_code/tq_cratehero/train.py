@@ -17,7 +17,7 @@ def setup_training(self):
     """
     # Example: Setup an array that will note transition tuples
     # (s, a, r, s')
-    self.agent.start_game(do_training=True)
+    self.agent.start_game(is_training=True)
     self.iteration = 0
     self.game = 0
     self.cumulative_reward = 0
@@ -74,7 +74,7 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
 
 
     # Store the model
-    if self.game % 10 == 0:
+    if self.game % 250 == 0:
         np.savez  (f"q-tables/q-table_{self.game}.pt", q = self.agent.q)
     np.savetxt("cum_rewards.txt", self.cumulative_rewards)
 
@@ -96,19 +96,18 @@ def reward_from_events(self, events: List[str]) -> int:
     certain behavior.
     """
     game_rewards = {
-        e.COIN_COLLECTED:  0.5,
+        e.COIN_COLLECTED:  0.2,
         e.KILLED_OPPONENT: 1.0,
         e.CRATE_DESTROYED: 0.1,
         e.KILLED_SELF:    -1.0,
         e.SURVIVED_ROUND:  1.0,
         e.GOT_KILLED:     -0.1,
-        e.BOMB_DROPPED:    0.02,
+        e.BOMB_DROPPED:    0.01,
         e.MOVED_DOWN:     -0.01,
         e.MOVED_UP:       -0.01,
         e.MOVED_LEFT:     -0.01,
         e.MOVED_RIGHT:    -0.01,
-        e.WAITED:         -0.01
-
+        e.WAITED:         -0.01,
     }
     reward_sum = 0
     for event in events:
