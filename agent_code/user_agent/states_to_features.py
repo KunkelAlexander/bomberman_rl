@@ -2,21 +2,9 @@
 # features.py
 import numpy as np
 from collections import deque
-
-import os
-import sys
-
-# get the directory two levels up from THIS file
-base = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..")
-)
-sys.path.insert(0, base)
-
-
 from settings import BOMB_POWER, BOMB_TIMER
 
-from typing import List
-import events as e
+
 
 # ---------------------------------------------------------------------------
 # constants & small helpers (unchanged unless noted)
@@ -32,8 +20,6 @@ ACT_BITS    = {a: i for i, a in enumerate(ACTS)}
 OBJ_BITS    = {a: i for i, a in enumerate(OBJS)}
 OCC_BITS    = {a: i for i, a in enumerate(OCCS)}
 
-N_ACTIONS   = len(ACTS)
-N_STATES    = 2**23
 
 # ------------- helpers ------------------------------------------------------
 def in_bounds(x, y, rows, cols):
@@ -296,6 +282,7 @@ def describe_state(state_id: int) -> str:
     dir_bits        = (state_id >> 16) & 0b111
     safety_bits     = (state_id >> 12) & 0b1111
     neighbour_bits  = state_id & 0xFFF  # lower 12 bits
+    print("obj bits: ", obj_bits, " dir_bits: ", dir_bits)
     obj_name = OBJS[obj_bits]
     dir_name = DIRS[dir_bits]
 
@@ -320,84 +307,3 @@ def describe_state(state_id: int) -> str:
         f"Neighbour Down    : {neigh_occ[2]}\n"
         f"Neighbour Left    : {neigh_occ[3]}"
     )
-
-
-
-def reward_from_events(self, events: List[str]) -> int:
-    """
-    *This is not a required function, but an idea to structure your code.*
-
-    Here you can modify the rewards your agent get so as to en/discourage
-    certain behavior.
-    """
-    game_rewards = {
-        e.COIN_COLLECTED:  0.2,
-        e.KILLED_OPPONENT: 1.0,
-        e.CRATE_DESTROYED: 0.1,
-        e.KILLED_SELF:    -1.0,
-        e.SURVIVED_ROUND:  1.0,
-        e.GOT_KILLED:     -0.1,
-        e.WAITED:         -0.02,
-    }
-    reward_sum = 0
-    for event in events:
-        if event in game_rewards:
-            reward_sum += game_rewards[event]
-    self.logger.info(f"Awarded {reward_sum} for events {', '.join(events)}")
-    return reward_sum
-
-
-def get_legal_actions(game_state) -> np.ndarray:
-    """
-    Return the list of ACTION IDs that are *physically legal* in the current Bomberman state.
-    Legal = the move keeps you on the board, lands on a free tile (0 in `arena`)
-            with no bomb and no other agent occupying it.
-            'WAIT' is always legal.
-            'BOMB' is legal iff you still have bombs_left and no bomb already on your tile.
-    Explosion/danger is NOT checked here – leave that to the policy.
-    """
-    # If we have no game state (first call or game over)--everything is allowed.
-    if game_state is None:
-        return np.arange(N_ACTIONS)
-
-    arena      = game_state["field"]          # 2-D int8 array, -1: wall, 1: crate, 0: free
-    bombs      = game_state["bombs"]          # [((x, y), timer), …]
-    others     = game_state["others"]         # [(name, score, bombs_left, (x, y)), …]
-    name, score, bombs_left, (x, y) = game_state["self"]
-    rows, cols = arena.shape
-
-    # ----- helpers -----------------------------------------------------------
-    def in_bounds(cx, cy):
-        return 0 <= cx < rows and 0 <= cy < cols
-
-    def tile_is_free(cx, cy):
-        """Free = no wall/crate, no bomb, no other agent."""
-        if not in_bounds(cx, cy):
-            return False
-        if arena[cx, cy] != 0:                # wall or crate
-            return False
-        for (bx, by), _ in bombs:
-            if bx == cx and by == cy:
-                return False
-        for *_ignore, (ox, oy) in others:
-            if ox == cx and oy == cy:
-                return False
-        return True
-    # -------------------------------------------------------------------------
-
-    legal = []
-
-    # Movement actions
-    for act, (dx, dy) in zip(DIRS, DIR_VECS):
-        if tile_is_free(x + dx, y + dy):
-            legal.append(ACT_BITS[act])
-
-    # WAIT is always legal
-    legal.append(ACT_BITS['WAIT'])
-
-    # BOMB: at least one bomb left *and* no bomb already on current tile
-    if bombs_left > 0 and all((bx, by) != (x, y) for (bx, by), _ in bombs):
-        legal.append(ACT_BITS['BOMB'])
-
-    return np.array(legal, dtype=int)
-

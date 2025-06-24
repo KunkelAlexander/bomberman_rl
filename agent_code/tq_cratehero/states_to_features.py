@@ -4,7 +4,10 @@ import numpy as np
 from collections import deque
 from settings import BOMB_POWER, BOMB_TIMER
 
+from typing import List
 
+
+import events as e
 
 # ---------------------------------------------------------------------------
 # constants & small helpers (unchanged unless noted)
@@ -307,3 +310,28 @@ def describe_state(state_id: int) -> str:
         f"Neighbour Down    : {neigh_occ[2]}\n"
         f"Neighbour Left    : {neigh_occ[3]}"
     )
+
+
+
+def reward_from_events(self, events: List[str]) -> int:
+    """
+    *This is not a required function, but an idea to structure your code.*
+
+    Here you can modify the rewards your agent get so as to en/discourage
+    certain behavior.
+    """
+    game_rewards = {
+        e.COIN_COLLECTED:  0.2,
+        e.KILLED_OPPONENT: 1.0,
+        e.CRATE_DESTROYED: 0.1,
+        e.KILLED_SELF:    -1.0,
+        e.SURVIVED_ROUND:  1.0,
+        e.GOT_KILLED:     -0.1,
+        e.WAITED:         -0.02,
+    }
+    reward_sum = 0
+    for event in events:
+        if event in game_rewards:
+            reward_sum += game_rewards[event]
+    self.logger.info(f"Awarded {reward_sum} for events {', '.join(events)}")
+    return reward_sum

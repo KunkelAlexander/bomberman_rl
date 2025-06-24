@@ -2,7 +2,6 @@
 # features.py
 import numpy as np
 from collections import deque
-
 import os
 import sys
 
@@ -12,11 +11,14 @@ base = os.path.abspath(
 )
 sys.path.insert(0, base)
 
-
+# now you can import modules from that folder:
 from settings import BOMB_POWER, BOMB_TIMER
 
 from typing import List
+
+
 import events as e
+
 
 # ---------------------------------------------------------------------------
 # constants & small helpers (unchanged unless noted)
@@ -33,7 +35,6 @@ OBJ_BITS    = {a: i for i, a in enumerate(OBJS)}
 OCC_BITS    = {a: i for i, a in enumerate(OCCS)}
 
 N_ACTIONS   = len(ACTS)
-N_STATES    = 2**23
 
 # ------------- helpers ------------------------------------------------------
 def in_bounds(x, y, rows, cols):
@@ -343,7 +344,6 @@ def reward_from_events(self, events: List[str]) -> int:
     for event in events:
         if event in game_rewards:
             reward_sum += game_rewards[event]
-    self.logger.info(f"Awarded {reward_sum} for events {', '.join(events)}")
     return reward_sum
 
 

@@ -2,21 +2,8 @@
 # features.py
 import numpy as np
 from collections import deque
-
-import os
-import sys
-
-# get the directory two levels up from THIS file
-base = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..")
-)
-sys.path.insert(0, base)
-
-
 from settings import BOMB_POWER, BOMB_TIMER
 
-from typing import List
-import events as e
 
 # ---------------------------------------------------------------------------
 # constants & small helpers (unchanged unless noted)
@@ -24,16 +11,25 @@ import events as e
 DIR_VECS    = [(0, -1), (1, 0), (0, 1), (-1, 0)]          # WURDL
 DIRS        = ["UP", "RIGHT", "DOWN", "LEFT"]
 ACTS        = DIRS + ["BOMB", "WAIT"]
-OBJS        = ["NONE", "ENEMY", "CRATE", "COIN"]
-OCCS        = ["EMPTY", "WALL", "COIN", "CRATE", "ENEMY", "BOMB", "EXPLOSION"]
 
-DIR_BITS    = {a: i for i, a in enumerate(DIRS)}
-ACT_BITS    = {a: i for i, a in enumerate(ACTS)}
-OBJ_BITS    = {a: i for i, a in enumerate(OBJS)}
-OCC_BITS    = {a: i for i, a in enumerate(OCCS)}
+DIR_BITS    = {i: a for i, a, in enumerate(DIRS)}
+BITS_DIR    = {v: k for k, v in DIR_BITS.items()}  # inverse lookup
+ACT_BITS    = {i: a for i, a, in enumerate(ACTS)}
+BITS_ACT    = {v: k for k, v in ACT_BITS.items()}  # inverse lookup
 
-N_ACTIONS   = len(ACTS)
-N_STATES    = 2**23
+# 2‑bit occupancy codes for the *immediate* neighbour tile
+OCCS        = ["WALL", "COIN", "CRATE", "ENEMY"]
+OCC_BITS    = {i: n for i, n in enumerate(OCCS)}
+BITS_OCC    = {n: i for i, n in OCC_BITS.items()}
+
+# 2‑bit encoding of object type of interest
+OBJ_BITS = {
+    "NONE"  : 0b00,
+    "ENEMY" : 0b01,
+    "CRATE" : 0b10,
+    "COIN"  : 0b11,
+}
+BITS_OBJ = {v: k for k, v in OBJ_BITS.items()}
 
 # ------------- helpers ------------------------------------------------------
 def in_bounds(x, y, rows, cols):
@@ -77,7 +73,7 @@ def dir_and_dist_bfs_to_adjacent(start, goals, arena, bombs, others):
     # collect all passable neighbours of every crate
     adj = set()
     for gx, gy in goals:
-        for dx, dy in DIR_VECS:
+        for dx, dy in DIR_VECS[1:]:
             nx, ny = gx + dx, gy + dy
             if in_bounds(nx, ny, rows, cols) and \
                arena[nx, ny] == 0:
@@ -166,8 +162,8 @@ def is_safe_tile(nx: int, ny: int,
             (including WAIT) according to best_safe_dir from that tile.
     False → certain death.
     """
-    if arena[nx, ny] != 0:                       # not walkable and therefore safe
-        return True
+    if arena[nx, ny] != 0:                       # not walkable and therefore not safe
+        return False
     if expl_map[nx, ny] > 0:                     # already exploding
         return False
 
@@ -176,16 +172,14 @@ def is_safe_tile(nx: int, ny: int,
 
 
 # ---------------------------------------------------------------------------
-# NEW   ──  compact 23‑bit state encoding  ───────────────────────────────────
+# 17‑bit state encoding  ───────────────────────────────────
 # layout (LSB→MSB):
-#   0 – 11   neighbour occupancy (4 × 3 bits URDL)
-#   12 – 15  safety bits for URDL (1 = safe tile, 0 = impassable or deadly)
-#   16 – 18  direction (3 bits) of nearest object‑of‑interest
-#   19 – 20  object type (2 bits) 00 none, 01 enemy, 10 crate, 11 coin
-#   21       bomb available bit (can a bomb safely be dropped *now*?)
-#   22       here‑safe bit (is current tile survivable?)
+#   0 – 7    neighbour occupancy (4 × 2 bits URDL)
+#   8 – 13   safety bits for actions URDLWB (1 = safe action, 0 unsafe action)
+#   14 – 15  direction (2 bits) of nearest object‑of‑interest
+#   16 – 17  object type (2 bits) 00 none, 01 enemy, 10 crate, 11 coin
 #
-# total: 23 bits  (still fits into a Python int)
+# total: 17 bits  (still fits into a Python int)
 # ---------------------------------------------------------------------------
 
 
@@ -206,52 +200,25 @@ def state_to_features(game_state: dict | None) -> int | None:
                   if arena[cx, cy] == 1}
     enemies    = {pos for *_n, pos in others}
 
-    # nearest XYZ (dir=0 means none found)
-    coin_dir,  coin_dist  = dir_and_dist_bfs((x, y), coins,
-                                             arena, bombs, others)
-    crate_dir, crate_dist = dir_and_dist_bfs_to_adjacent((x, y), crate_pos,
-                                             arena, bombs, others)
-    enemy_dir, enemy_dist = dir_and_dist_bfs((x, y), enemies,
-                                             arena, bombs, others)
-
-    # ---------- determine “object of interest” according to priority rules --
-    obj_bits  = OBJ_BITS["NONE"]
-    dir_bits  = DIR_BITS["UP"]
-
-    in_range_enemy = enemy_dist != None and enemy_dist <= 5
-
-    if in_range_enemy:
-        obj_bits = OBJ_BITS["ENEMY"]
-        dir_bits = enemy_dir
-    elif coin_dist != None:
-        obj_bits = OBJ_BITS["COIN"]
-        dir_bits = coin_dir
-    elif crate_dist != None:
-        obj_bits = OBJ_BITS["CRATE"]
-        dir_bits = crate_dir
-    elif enemy_dist != None:  # farther enemies are the last resort
-        obj_bits = OBJ_BITS["ENEMY"]
-        dir_bits = enemy_dir
-    # else keep NONE / 00
 
     # ---------------------------------------------------------------- per‑direction info
-    neighbour_bits = 0   # 12 bits
-    safety_bits    = 0   # 4  bits (URDL)
+    neighbour_bits = 0   # 8 bits (2xURDL)
+    safety_bits    = 0   # 6 bits (URDLBW)
 
-    for d, (dx, dy) in enumerate(DIR_VECS, start=1):   # d = 1..4 (URDL)
+    for d, (dx, dy) in enumerate(DIR_VECS[1:], start=1):   # d = 1..4 (URDL)
         nx, ny = x + dx, y + dy
 
         # ---- 3‑bit OCCUPANCY ----------------------------------------------
         if arena[nx, ny] == -1:
-            occ = OCC_BITS["WALL"]
+            occ = OCC_REV["WALL"]
         elif arena[nx, ny] == 1:
-            occ = OCC_BITS["CRATE"]
+            occ = OCC_REV["CRATE"]
         elif any((nx, ny) == pos for *_n, pos in others):
-            occ = OCC_BITS["ENEMY"]
+            occ = OCC_REV["ENEMY"]
         elif (nx, ny) in coins:
-            occ = OCC_BITS["COIN"]
+            occ = OCC_REV["COIN"]
         else:
-            occ = OCC_BITS["EMPTY"]
+            occ = OCC_REV["EMPTY"]
 
         neighbour_bits |= (occ & 0b111) << (3 * (4 - d))  # 3 bits per dir
 
@@ -260,8 +227,8 @@ def state_to_features(game_state: dict | None) -> int | None:
             safety_bits |= 1 << (d - 1)
 
     # ---------------------------------------------------------------- tile‑related bits
-    # is waiting safe?
-    wait_bit = is_safe_tile(x, y, arena, bombs, expl_map, blast_map, others)
+    # safe on current tile now?
+    here_safe = is_safe_tile(x, y, arena, bombs, expl_map, blast_map, others)
 
     # would it still be safe after placing a bomb here?
     bombs_with_self     = list(bombs) + [((x, y), BOMB_TIMER)]
@@ -270,16 +237,55 @@ def state_to_features(game_state: dict | None) -> int | None:
                                        blast_map_with_self, others)
 
     bomb_on_tile = any((bx, by) == (x, y) for (bx, by), _ in bombs)
-    # is placing a bomb allowed and safe?
-    bomb_bit    = int(bombs_left > 0 and not bomb_on_tile and here_safe_with_bomb)
+    bomb_avail   = int(bombs_left > 0 and not bomb_on_tile and here_safe_with_bomb)
+
+
+
+    # nearest XYZ (dir=0 means none found)
+    coin_dir,  coin_dist  = dir_and_dist_bfs((x, y), coins,
+                                             arena, bombs, others)
+    crate_dir, crate_dist = dir_and_dist_bfs_to_adjacent((x, y), crate_pos,
+                                             arena, bombs, others)
+    enemy_dir, enemy_dist = dir_and_dist_bfs((x, y), enemies,
+                                             arena, bombs, others)
+
+    #if coin_dir!= None:
+    #    print(f"Direction to coin:  {DIR_NAME[coin_dir]}, {coin_dist}")
+    #if crate_dir!= None:
+    #    print(f"Direction to crate: {DIR_NAME[crate_dir]}, {crate_dist}")
+    #if enemy_dir!= None:
+    #    print(f"Direction to enemy: {DIR_NAME[enemy_dir]}, {enemy_dist}")
+    # ---------- determine “object of interest” according to priority rules --
+    obj_bits  = OBJ_BITS["NONE"]
+    dir_bits  = DIR_BITS[0]
+
+    # helper: convert dir (0‑4) -> two bits (0‑3)
+    def dir_to_bits(d: int) -> int:
+        return DIR_BITS[d]  # mapping already handles 0 → 00
+
+    in_range_enemy = enemy_dist != None and enemy_dist <= 5
+
+    if in_range_enemy:
+        obj_bits = OBJ_BITS["ENEMY"]
+        dir_bits = dir_to_bits(enemy_dir)
+    elif coin_dist != None:
+        obj_bits = OBJ_BITS["COIN"]
+        dir_bits = dir_to_bits(coin_dir)
+    elif crate_dist != None:
+        obj_bits = OBJ_BITS["CRATE"]
+        dir_bits = dir_to_bits(crate_dir)
+    elif enemy_dist != None:  # farther enemies are the last resort
+        obj_bits = OBJ_BITS["ENEMY"]
+        dir_bits = dir_to_bits(enemy_dir)
+    # else keep NONE / 00
 
     # ---------------------------------------------------------------- pack bits into int
     state_id = (
-        (wait_bit     << 22) |
-        (bomb_bit     << 21) |
-        (obj_bits     << 19) |
-        (dir_bits     << 16) |
-        (safety_bits  << 12) |
+        (here_safe   << 22) |
+        (bomb_avail  << 21) |
+        (obj_bits    << 19) |
+        (dir_bits    << 16) |
+        (safety_bits << 12) |
         neighbour_bits
     )
 
@@ -290,114 +296,33 @@ def state_to_features(game_state: dict | None) -> int | None:
 # ---------------------------------------------------------------------------
 
 def describe_state(state_id: int) -> str:
-    wait_bit        = (state_id >> 22) & 1
-    bomb_bit        = (state_id >> 21) & 1
-    obj_bits        = (state_id >> 19) & 0b11
-    dir_bits        = (state_id >> 16) & 0b111
-    safety_bits     = (state_id >> 12) & 0b1111
-    neighbour_bits  = state_id & 0xFFF  # lower 12 bits
-    obj_name = OBJS[obj_bits]
-    dir_name = DIRS[dir_bits]
+    here_safe   = (state_id >> 22) & 1
+    bomb_avail  = (state_id >> 21) & 1
+    obj_bits    = (state_id >> 19) & 0b11
+    dir_bits    = (state_id >> 16) & 0b111
+    safety_bits = (state_id >> 12) & 0xF
+    neighbour   = state_id & 0xFFF  # 12 lowest bits
 
-    safe_actions = [name for d, name in enumerate(("UP", "RIGHT", "DOWN", "LEFT"), 1) if safety_bits & (1 << (d - 1))]
-    if wait_bit:
-        safe_actions += ["WAIT"]
-    if bomb_bit:
-        safe_actions += ["BOMB"]
+    print("obj bits: ", obj_bits, " dir_bits: ", dir_bits)
+    obj_name = BITS_OBJ[obj_bits]
+    dir_name = DIR_NAME[BITS_DIR[dir_bits]]
+
+    def bits_to_dirs(bits):
+        return [name for d, name in enumerate(("UP", "RIGHT", "DOWN", "LEFT"), 1)
+                if bits & (1 << (d - 1))]
 
     # decode neighbour occupancy
     neigh_occ = []
     for shift in (9, 6, 3, 0):
-        code = (neighbour_bits >> shift) & 3
-        neigh_occ.append(OCCS[code])
+        code = (neighbour >> shift) & 0b111
+        neigh_occ.append(OCC[code])
 
     return (
         f"{state_id:022b}\n"
         f"Nearest interest  : {obj_name} ({dir_name})\n"
-        f"Safe actions      : {safe_actions}\n"
+        f"Safe actions      : {bits_to_dirs(safety_bits)}\n"
         f"Neighbour Up      : {neigh_occ[0]}\n"
         f"Neighbour Right   : {neigh_occ[1]}\n"
         f"Neighbour Down    : {neigh_occ[2]}\n"
         f"Neighbour Left    : {neigh_occ[3]}"
     )
-
-
-
-def reward_from_events(self, events: List[str]) -> int:
-    """
-    *This is not a required function, but an idea to structure your code.*
-
-    Here you can modify the rewards your agent get so as to en/discourage
-    certain behavior.
-    """
-    game_rewards = {
-        e.COIN_COLLECTED:  0.2,
-        e.KILLED_OPPONENT: 1.0,
-        e.CRATE_DESTROYED: 0.1,
-        e.KILLED_SELF:    -1.0,
-        e.SURVIVED_ROUND:  1.0,
-        e.GOT_KILLED:     -0.1,
-        e.WAITED:         -0.02,
-    }
-    reward_sum = 0
-    for event in events:
-        if event in game_rewards:
-            reward_sum += game_rewards[event]
-    self.logger.info(f"Awarded {reward_sum} for events {', '.join(events)}")
-    return reward_sum
-
-
-def get_legal_actions(game_state) -> np.ndarray:
-    """
-    Return the list of ACTION IDs that are *physically legal* in the current Bomberman state.
-    Legal = the move keeps you on the board, lands on a free tile (0 in `arena`)
-            with no bomb and no other agent occupying it.
-            'WAIT' is always legal.
-            'BOMB' is legal iff you still have bombs_left and no bomb already on your tile.
-    Explosion/danger is NOT checked here – leave that to the policy.
-    """
-    # If we have no game state (first call or game over)--everything is allowed.
-    if game_state is None:
-        return np.arange(N_ACTIONS)
-
-    arena      = game_state["field"]          # 2-D int8 array, -1: wall, 1: crate, 0: free
-    bombs      = game_state["bombs"]          # [((x, y), timer), …]
-    others     = game_state["others"]         # [(name, score, bombs_left, (x, y)), …]
-    name, score, bombs_left, (x, y) = game_state["self"]
-    rows, cols = arena.shape
-
-    # ----- helpers -----------------------------------------------------------
-    def in_bounds(cx, cy):
-        return 0 <= cx < rows and 0 <= cy < cols
-
-    def tile_is_free(cx, cy):
-        """Free = no wall/crate, no bomb, no other agent."""
-        if not in_bounds(cx, cy):
-            return False
-        if arena[cx, cy] != 0:                # wall or crate
-            return False
-        for (bx, by), _ in bombs:
-            if bx == cx and by == cy:
-                return False
-        for *_ignore, (ox, oy) in others:
-            if ox == cx and oy == cy:
-                return False
-        return True
-    # -------------------------------------------------------------------------
-
-    legal = []
-
-    # Movement actions
-    for act, (dx, dy) in zip(DIRS, DIR_VECS):
-        if tile_is_free(x + dx, y + dy):
-            legal.append(ACT_BITS[act])
-
-    # WAIT is always legal
-    legal.append(ACT_BITS['WAIT'])
-
-    # BOMB: at least one bomb left *and* no bomb already on current tile
-    if bombs_left > 0 and all((bx, by) != (x, y) for (bx, by), _ in bombs):
-        legal.append(ACT_BITS['BOMB'])
-
-    return np.array(legal, dtype=int)
-

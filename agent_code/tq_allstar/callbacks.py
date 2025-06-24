@@ -8,7 +8,7 @@ from .agent_tabular_q import TabularQAgent
 
 from .config import ACTIONS, N_ACTIONS, N_STATES
 from .helpers import get_legal_actions, ascii_pictogram
-from .states_to_features import state_to_features, describe_state, reward_from_events
+from .states_to_features import state_to_features, describe_state
 
 config = {
     "n_episode"           : 50000,  # Number of training episodes

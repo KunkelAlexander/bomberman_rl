@@ -115,3 +115,5 @@ results/
 *.npz
 *.png
 *.gif
+*.gz
+*.pickle

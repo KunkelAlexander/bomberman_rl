@@ -6,25 +6,24 @@ import numpy as np
 
 from .agent_tabular_q import TabularQAgent
 
-from .config import ACTIONS, N_ACTIONS, N_STATES
-from .helpers import get_legal_actions, ascii_pictogram
+from .helpers import get_legal_actions, ACTS, N_ACTIONS, N_STATES, state_to_features, describe_state
 
 config = {
-    "n_episode"           : 50000,   # Number of training episodes
+    "n_episode"           : 50000,  # Number of training episodes
     "n_eval"              : 100,    # Number of evaluation episodes every eval_freq training episodes
     "eval_freq"           : 1000,
     "train_freq"          : 1,      # Train models every train_freq training episodes
-    "discount"            : 0.95,   # Discount in all Q learning algorithms
-    "learning_rate_decay" : 1,
-    "exploration"         : 1.0,    # Initial exploration rate
-    "exploration_decay"   : 1e-3,   # Decrease of exploration rate for every action
-    "exploration_min"     : 0.2,
-    "learning_rate"       : 1e-1,
-    "learning_rate_decay" : 1,
+    "discount"            : 0.95,    # Discount in all Q learning algorithms
+    "exploration"         : 0.0,    # Initial exploration rate
+    "exploration_decay"   : 1e-5,   # Decrease of exploration rate for every action
+    "exploration_min"     : 0.0,
+    "learning_rate_mode"  : "adaptive",
+    "learning_rate"       : 1,
+    "learning_rate_decay" : .9999,
     "randomise_order"     : False,  # Randomise starting order of agents for every game
     "only_legal_actions"  : True,   # Have agents only take legal actions
     "debug"               : False,  # Print loss and evaluation information during training
-    "initial_q"           : 0.6,    # Initial Q value for tabular Q learning
+    "initial_q"           : 0.0,      # Initial Q value for tabular Q learning
 }
 
 def setup(self):
@@ -49,10 +48,17 @@ def setup(self):
             config=config,
     )
 
-    if not self.train and os.path.isfile("q-tables/q-table_990.pt.npz"):
+
+    filepath = "q_table.npz"
+
+    if os.path.isfile(filepath):
         print("loadu")
         self.logger.info("Loading model from saved state.")
-        self.agent.q = np.load("q-tables/q-table_990.pt.npz")["q"]
+
+        data     = np.load(filepath, allow_pickle=True)
+        self.agent.q          = data["q"].item()
+        self.agent.q_visits   = data["q_visits"].item()   # if you need visits later
+
 
 
 def act(self, game_state: dict) -> str:
@@ -67,170 +73,10 @@ def act(self, game_state: dict) -> str:
 
     features = state_to_features(game_state)
 
-    #Debugging
+    if not self.train:
 
-    #print(f"Feature bits: {features:010b}")      # 10-bit binary
-    #print(ascii_pictogram(game_state))
+        features = state_to_features(game_state)
+        print(describe_state(features))
 
-    return ACTIONS[self.agent.act(features, actions=get_legal_actions(game_state=game_state))]
+    return ACTS[self.agent.act(features, actions=get_legal_actions(game_state=game_state))]
 
-
-
-
-# Cardinal helpers -----------------------------------------------------------
-DIRS = [(0, -1), (1, 0), (0, 1), (-1, 0)]   # U, R, D, L
-
-def in_bounds(x, y, rows, cols):
-    return 0 <= x < rows and 0 <= y < cols
-
-def free_of_bombs_agents(bx, by, bombs, others):
-    """True iff no bomb or agent occupies (bx,by)."""
-    return all((bx, by) != (x, y) for (x, y), _ in bombs) and \
-           all((bx, by) != (x, y) for *_n, (x, y) in others)
-
-
-def state_to_features(game_state: dict) -> int:
-    """
-    *This is not a required function, but an idea to structure your code.*
-
-    Converts the game state to the input of your model, i.e.
-    a feature vector.
-
-    You can find out about the state of the game environment via game_state,
-    which is a dictionary. Consult 'get_state_for_agent' in environment.py to see
-    what it contains.
-
-
-        state = {
-            'round': self.round,
-            'step': self.step,
-            'field': np.array(self.arena),
-            'self': agent.get_state(),
-            'others': [other.get_state() for other in self.active_agents if other is not agent],
-            'bombs': [bomb.get_state() for bomb in self.bombs],
-            'coins': [coin.get_state() for coin in self.coins if coin.collectable],
-            'user_input': self.user_input,
-        }
-
-
-        explosion_map = np.zeros(self.arena.shape)
-        for exp in self.explosions:
-            if exp.is_dangerous():
-                for (x, y) in exp.blast_coords:
-                    explosion_map[x, y] = max(explosion_map[x, y], exp.timer - 1)
-        state['explosion_map'] = explosion_map
-
-        agent.get_state: Provide information about this agent for the global game state
-        return self.name, self.score, self.bombs_left, (self.x, self.y)
-
-        coin.get_state(self):
-        return self.x, self.y
-
-        bomb.get_state(self):
-        return (self.x, self.y), self.timer
-
-    :param game_state:  A dictionary describing the current game board.
-    :return: np.array
-    """
-    # This is the dict before the game begins and after it ends
-    if game_state is None:
-        return None
-
-    if game_state is None:
-        return None                        # called before game starts
-
-    arena      = game_state["field"]       # -1 wall, 1 crate, 0 free
-    bombs      = game_state["bombs"]       # [((x,y), timer), ...]
-    coins      = game_state["coins"]       # [(x,y), ...]
-    others     = game_state["others"]      # [(name, score, bombs_left, (x,y)), ...]
-    explosions = game_state["explosion_map"]
-    name, score, bombs_left, (x, y) = game_state["self"]
-    rows, cols = arena.shape
-
-    # -----------------------------------------------------------------------
-    # 0. Danger at current tile
-    danger_here = explosions[x, y] > 0
-
-    # 1-4. Safe moves (free & not exploding next tick)
-    safe_dirs = []
-    for dx, dy in DIRS:
-        nx, ny = x + dx, y + dy
-        safe = in_bounds(nx, ny, rows, cols)           \
-               and arena[nx, ny] == 0                  \
-               and free_of_bombs_agents(nx, ny, bombs, others) \
-               and explosions[nx, ny] == 0
-        safe_dirs.append(safe)
-
-    # 5-8. Coin direction flags
-    USE_SHORTEST_PATH = True
-    if not USE_SHORTEST_PATH:
-        # Line of sight
-        coin_dirs = [False, False, False, False]
-        for cx, cy in coins:
-            dx, dy = np.sign(cx - x), np.sign(cy - y)
-            # same column (vertical) or same row (horizontal)
-            if cx == x and dy != 0:
-                step = (0, dy)
-            elif cy == y and dx != 0:
-                step = (dx, 0)
-            else:
-                continue
-            # Walk from agent towards coin until blocked
-            tx, ty = x + step[0], y + step[1]
-            visible = True
-            while (tx, ty) != (cx, cy):
-                if arena[tx, ty] != 0:         # wall or crate blocks view
-                    visible = False
-                    break
-                tx += step[0]; ty += step[1]
-            if visible:
-                coin_dirs[DIRS.index(step)] = True
-    else:
-        # -----------------------------------------------------------------------
-        # 5-8. Coin direction flags (shortest-path first step)
-        coin_dirs = [False, False, False, False]        # U, R, D, L
-
-        # Breadth-first search limited to a modest radius (≤ 6 is enough)
-        from collections import deque
-        visited = set([(x, y)])
-        queue   = deque([((x, y), None)])               # (pos, first_dir)
-
-        while queue:
-            (cx, cy), first_dir = queue.popleft()
-
-            # Found a coin? record its originating direction
-            if (cx, cy) in coins and first_dir is not None:
-                coin_dirs[first_dir] = True
-                break   # stop at nearest coin
-
-            # expand neighbours
-            for dir_idx, (dx, dy) in enumerate(DIRS):
-                nx, ny = cx + dx, cy + dy
-                if (nx, ny) in visited:
-                    continue
-                if not in_bounds(nx, ny, rows, cols):
-                    continue
-                if arena[nx, ny] != 0:                  # wall or crate blocks
-                    continue
-                if not free_of_bombs_agents(nx, ny, bombs, others):
-                    continue
-
-                visited.add((nx, ny))
-                queue.append(((nx, ny), dir_idx if first_dir is None else first_dir))
-
-
-    # 9. Bomb available
-    bomb_on_tile = any((bx, by) == (x, y) for (bx, by), _ in bombs)
-    bomb_avail   = bombs_left > 0 and not bomb_on_tile
-
-    # -----------------------------------------------------------------------
-    # Encode to single integer key
-    bits = [danger_here, *safe_dirs, *coin_dirs, bomb_avail]
-    bits = np.array(bits, dtype=np.uint8)
-    # little-endian binary-to-int: Σ b_i · 2ⁱ
-    state_id = int((bits << np.arange(bits.size)).sum())
-
-    #index (LSB→MSB):  9   8   7   6   5     4   3   2   1   0
-    #feature:          B   CL  CD  CR  CU    SL  SD  SR  SU  D
-
-    return state_id

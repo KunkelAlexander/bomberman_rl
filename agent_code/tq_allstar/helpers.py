@@ -2,21 +2,13 @@
 # features.py
 import numpy as np
 from collections import deque
-
-import os
-import sys
-
-# get the directory two levels up from THIS file
-base = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..")
-)
-sys.path.insert(0, base)
-
-
 from settings import BOMB_POWER, BOMB_TIMER
 
 from typing import List
+
+
 import events as e
+
 
 # ---------------------------------------------------------------------------
 # constants & small helpers (unchanged unless noted)
@@ -388,7 +380,7 @@ def get_legal_actions(game_state) -> np.ndarray:
     legal = []
 
     # Movement actions
-    for act, (dx, dy) in zip(DIRS, DIR_VECS):
+    for act, (dx, dy) in DIRS.items():
         if tile_is_free(x + dx, y + dy):
             legal.append(ACT_BITS[act])
 

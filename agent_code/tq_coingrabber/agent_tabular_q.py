@@ -1,8 +1,9 @@
 import numpy as np
 
-from collections import deque
-
+from collections import defaultdict, deque
 from .agent_parent import Agent
+
+import pickle
 
 class TabularQAgent(Agent):
     def __init__(self, agent_id: int, n_actions: int, n_states: int, config: dict):
@@ -15,29 +16,44 @@ class TabularQAgent(Agent):
         :param config: A dictionary containing agent configuration parameters.
         """
         super().__init__(agent_id, n_actions)
-        self.n_states            = n_states
-        self.initial_q           = config["initial_q"]
-        self.q                   = self.initial_q * np.ones((n_states, n_actions))
-        self.train_freq          = config["train_freq"]
-        self.discount            = config["discount"]
-        self.learning_rate       = config["learning_rate"]
-        self.learning_rate_decay = config["learning_rate_decay"]
-        self.exploration         = config["exploration"]
-        self.exploration_decay   = config["exploration_decay"]
-        self.exploration_min     = config["exploration_min"]
-        self.debug               = config["debug"]
-        self.name                = f"table-q agent {agent_id}"
-        self.training_data       = []
-        self.training_episodes   = deque(maxlen=self.train_freq)
+        self.n_states              = n_states
+        self.initial_q             = config["initial_q"]
+        # instead of a big array, use a defaultdict that creates a vector of size n_actions
+        self.q                     = {}  # state → np.array of shape (n_actions,)
+        self.q_visits              = {}  # state → np.array of ints (n_actions,)
+        self.train_freq            = config["train_freq"]
+        self.discount              = config["discount"]
+        self.learning_rate_mode    = config["learning_rate_mode"]
+        self.learning_rate         = config["learning_rate"]
+        self.learning_rate_decay   = config["learning_rate_decay"]
+        self.exploration           = config["exploration"]
+        self.exploration_decay     = config["exploration_decay"]
+        self.exploration_min       = config["exploration_min"]
+        self.debug                 = config["debug"]
+        self.name                  = f"table-q agent {agent_id}"
+        self.training_data         = []
+        self.training_episodes     = deque(maxlen=self.train_freq)
+        self.n_training_episodes   = 0
+        self.all_training_episodes = []
+        self.cumulative_reward     = 0
+        self.cumulative_rewards    = []
 
-    def start_game(self, do_training: bool):
+    def _ensure_state(self, state):
+        """Create Q & visits arrays for a new state if needed."""
+        if state not in self.q:
+            self.q[state]        = np.ones(self.n_actions) * self.initial_q
+            self.q_visits[state] = np.zeros(self.n_actions, dtype=int)
+
+    def start_game(self, is_training: bool):
         """
         Set whether the agent is in training mode and reset cumulative rewards.
 
         :param do_training: Set training mode of agent.
         """
-        super().start_game(do_training)
+        super().start_game(is_training)
         self.training_data = []
+        self.cumulative_reward = 0
+
 
     def act(self, state, actions):
         """
@@ -47,6 +63,9 @@ class TabularQAgent(Agent):
         :param actions: List of available actions.
         :return: The selected action.
         """
+        # make sure the arrays exist before we read them
+        self._ensure_state(state)
+
         # Explore
         if np.random.uniform(0, 1) < self.exploration and self.is_training:
             action = np.random.choice(actions)
@@ -54,12 +73,16 @@ class TabularQAgent(Agent):
         else:
             # Disable q-values of illegal actions
             illegal_actions = np.setdiff1d(np.arange(self.n_actions), actions)
-            self.q[state, illegal_actions] = -np.inf
-            best_actions = np.argwhere(self.q[state] == np.max(self.q[state]))
-            action = np.random.choice(best_actions.flatten())
+
+            # work on a copy, leave the table intact
+            q_row = self.q[state].copy()
+            q_row[illegal_actions] = -np.inf          # mask only in the copy
+
+            best = np.flatnonzero(q_row == q_row.max())
+            action = np.random.choice(best)
 
         # Decrease exploration rate
-        self.exploration = np.min([self.exploration * (1-self.exploration_decay), self.exploration_min])
+        self.exploration = np.max([self.exploration * (1-self.exploration_decay), self.exploration_min])
 
         if self.debug:
             print(f"Pick action {action} in state {state} with q-values {self.q[state]}")
@@ -78,6 +101,8 @@ class TabularQAgent(Agent):
         :param done: True if the episode is done, False otherwise.
         """
         super().update(iteration, state, legal_actions, action, reward, done)
+
+        self.cumulative_reward += reward
         if self.is_training:
             self.training_data.append([iteration, state, legal_actions, action, reward, done])
 
@@ -89,14 +114,19 @@ class TabularQAgent(Agent):
         """
         super().final_update(reward)
 
+        self.cumulative_reward += reward
+
         if self.is_training:
-            self.training_data[-1][self.DONE] = True
+            self.training_data[-1][self.DONE]    = True
             self.training_data[-1][self.REWARD] += reward
 
             self.validate_training_data()
 
             self.training_episodes.append(self.training_data)
             self.training_data = []
+
+            self.cumulative_rewards.append(self.cumulative_reward)
+            self.cumulative_reward = 0
 
     def validate_training_data(self):
         """
@@ -122,23 +152,51 @@ class TabularQAgent(Agent):
         next_iteration = 0
         next_state = 0
 
-        for data in self.training_episodes:
+        for i, data in enumerate(self.training_episodes):
             for iteration, state, legal_actions, action, reward, done in reversed(data):
-                if self.debug:
-                    print(f"Iter {iteration}: q-value in state {state} before update: {self.q[state]} with reward {reward} and Game Over = {done}")
+
+                # make sure the arrays exist before we read them
+                self._ensure_state(state)
+
+                # Happens in the round the agent dies
+                if action == None:
+                    action = 0
+
+                # Increment visit count
+                self.q_visits[state][action] += 1
+
+                if self.learning_rate_mode == "adaptive":
+                    # Compute adaptive learning rate
+                    alpha = max(0.001, min(self.learning_rate, 1.0 / (1 + self.q_visits[state][action])))
+                elif self.learning_rate_mode == "fixed":
+                    alpha = self.learning_rate
+                else:
+                    raise ValueError("Unknown learning_rate_mode")
 
                 # Q-learning update rule
                 if done:
                     self.q[state][action] = reward
                 else:
-                    self.q[state][action] += self.learning_rate * (reward + self.discount * next_max - self.q[state][action])
+                    self.q[state][action] += alpha * (reward + self.discount * next_max - self.q[state][action])
 
                 next_max = np.max(self.q[state])
 
-                if self.debug:
-                    print(f"q-value in state {state} after update: {self.q[state]}")
+            if self.n_training_episodes % 50 == 0 and self.debug:
+                print("States seen: ", len(self.q))
 
-            self.learning_rate *= self.learning_rate_decay
+            self.n_training_episodes += 1
+
+        # move to buffer for all episodes
+        self.all_training_episodes += self.training_episodes
 
         # delete training episodes after training
         self.training_episodes = []
+
+    def save_transitions(self, filepath):
+        with open(filepath, 'wb') as f:
+            pickle.dump(list(self.all_training_episodes), f)
+
+    def load_transitions(self, filepath):
+        import pickle
+        with open(filepath, 'rb') as f:
+            self.training_episodes = pickle.load(f)

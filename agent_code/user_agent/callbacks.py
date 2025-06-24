@@ -1,4 +1,5 @@
-from .helpers import ascii_pictogram, state_to_features, describe_state
+from .helpers import ascii_pictogram
+from .states_to_features import state_to_features, describe_state
 def setup(self):
     pass
 
