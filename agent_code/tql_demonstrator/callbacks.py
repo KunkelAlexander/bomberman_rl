@@ -4,75 +4,7 @@ from random import shuffle
 import numpy as np
 
 import settings as s
-
-
-ACTIONS              = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
-ACTION_STRING_TO_ID  = {action: id for id, action in enumerate(ACTIONS)}
-N_ACTIONS            = len(ACTIONS)
-
-
-DIRS = {
-    'UP'   : ( 0, -1),
-    'RIGHT': ( 1,  0),
-    'DOWN' : ( 0,  1),
-    'LEFT' : (-1,  0),
-}
-
-def get_legal_actions(game_state) -> np.ndarray:
-    """
-    Return the list of ACTION IDs that are *physically legal* in the current Bomberman state.
-    Legal = the move keeps you on the board, lands on a free tile (0 in `arena`)
-            with no bomb and no other agent occupying it.
-            'WAIT' is always legal.
-            'BOMB' is legal iff you still have bombs_left and no bomb already on your tile.
-    Explosion/danger is NOT checked here – leave that to the policy.
-    """
-    # If we have no game state (first call or game over)--everything is allowed.
-    if game_state is None:
-        return np.arange(N_ACTIONS)
-
-    arena      = game_state["field"]          # 2-D int8 array, -1: wall, 1: crate, 0: free
-    bombs      = game_state["bombs"]          # [((x, y), timer), …]
-    others     = game_state["others"]         # [(name, score, bombs_left, (x, y)), …]
-    name, score, bombs_left, (x, y) = game_state["self"]
-    rows, cols = arena.shape
-
-    # ----- helpers -----------------------------------------------------------
-    def in_bounds(cx, cy):
-        return 0 <= cx < rows and 0 <= cy < cols
-
-    def tile_is_free(cx, cy):
-        """Free = no wall/crate, no bomb, no other agent."""
-        if not in_bounds(cx, cy):
-            return False
-        if arena[cx, cy] != 0:                # wall or crate
-            return False
-        for (bx, by), _ in bombs:
-            if bx == cx and by == cy:
-                return False
-        for *_ignore, (ox, oy) in others:
-            if ox == cx and oy == cy:
-                return False
-        return True
-    # -------------------------------------------------------------------------
-
-    legal = []
-
-    # Movement actions
-    for act, (dx, dy) in DIRS.items():
-        if tile_is_free(x + dx, y + dy):
-            legal.append(ACTION_STRING_TO_ID[act])
-
-    # WAIT is always legal
-    legal.append(ACTION_STRING_TO_ID['WAIT'])
-
-    # BOMB: at least one bomb left *and* no bomb already on current tile
-    if bombs_left > 0 and all((bx, by) != (x, y) for (bx, by), _ in bombs):
-        legal.append(ACTION_STRING_TO_ID['BOMB'])
-
-    return np.array(legal, dtype=int)
-
-
+from helpers import get_legal_actions, ACTS
 
 def look_for_targets(free_space, start, targets, logger=None):
     """Find direction of closest target that can be reached via free tiles.
@@ -166,8 +98,9 @@ def act(self, game_state):
     # Explore
     if np.random.uniform(0, 1) < self.exploration:
         self.logger.info(f'Picking action randomly with exploration {self.exploration}')
-        action = np.random.choice(get_legal_actions(game_state=game_state))
-        return action
+        legal_actions = get_legal_actions(game_state=game_state)
+        action = np.random.choice(legal_actions)
+        return ACTS[action]
 
     self.logger.info('Picking action according to rule set')
     # Check if we are in a different round

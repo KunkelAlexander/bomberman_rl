@@ -17,21 +17,27 @@ class TabularQAgent(Agent):
         :param config: A dictionary containing agent configuration parameters.
         """
         super().__init__(agent_id, n_actions)
-        self.n_states            = n_states
-        self.initial_q           = config["initial_q"]
-        self.q                   = self.initial_q * np.ones((n_states, n_actions))
-        self.train_freq          = config["train_freq"]
-        self.discount            = config["discount"]
-        self.learning_rate       = config["learning_rate"]
-        self.learning_rate_decay = config["learning_rate_decay"]
-        self.exploration         = config["exploration"]
-        self.exploration_decay   = config["exploration_decay"]
-        self.exploration_min     = config["exploration_min"]
-        self.debug               = config["debug"]
-        self.name                = f"table-q agent {agent_id}"
-        self.training_data       = []
-        self.training_episodes   = deque(maxlen=self.train_freq)
-        self.seen_states         = set()
+        self.n_states              = n_states
+        self.initial_q             = config["initial_q"]
+        self.q                     = self.initial_q * np.ones((n_states, n_actions))
+        self.last_q                = self.q.copy()
+        self.q_visits              = np.zeros((n_states, n_actions), dtype=int)
+        self.train_freq            = config["train_freq"]
+        self.discount              = config["discount"]
+        self.learning_rate         = config["learning_rate"]
+        self.learning_rate_decay   = config["learning_rate_decay"]
+        self.exploration           = config["exploration"]
+        self.exploration_decay     = config["exploration_decay"]
+        self.exploration_min       = config["exploration_min"]
+        self.debug                 = config["debug"]
+        self.name                  = f"table-q agent {agent_id}"
+        self.training_data         = []
+        self.training_episodes     = deque(maxlen=self.train_freq)
+        self.n_training            = 0
+        self.all_training_episodes = []
+        self.seen_states           = set()
+        self.cumulative_reward     = 0
+        self.cumulative_rewards    = []
 
     def start_game(self, is_training: bool):
         """
@@ -41,6 +47,8 @@ class TabularQAgent(Agent):
         """
         super().start_game(is_training)
         self.training_data = []
+        self.cumulative_reward = 0
+
 
     def act(self, state, actions):
         """
@@ -66,7 +74,7 @@ class TabularQAgent(Agent):
             action = np.random.choice(best)
 
         # Decrease exploration rate
-        self.exploration = np.min([self.exploration * (1-self.exploration_decay), self.exploration_min])
+        self.exploration = np.max([self.exploration * (1-self.exploration_decay), self.exploration_min])
 
         if self.debug:
             print(f"Pick action {action} in state {state} with q-values {self.q[state]}")
@@ -85,6 +93,8 @@ class TabularQAgent(Agent):
         :param done: True if the episode is done, False otherwise.
         """
         super().update(iteration, state, legal_actions, action, reward, done)
+
+        self.cumulative_reward += reward
         if self.is_training:
             self.training_data.append([iteration, state, legal_actions, action, reward, done])
 
@@ -96,6 +106,8 @@ class TabularQAgent(Agent):
         """
         super().final_update(reward)
 
+        self.cumulative_reward += reward
+
         if self.is_training:
             self.training_data[-1][self.DONE]    = True
             self.training_data[-1][self.REWARD] += reward
@@ -104,6 +116,9 @@ class TabularQAgent(Agent):
 
             self.training_episodes.append(self.training_data)
             self.training_data = []
+
+            self.cumulative_rewards.append(self.cumulative_reward)
+            self.cumulative_reward = 0
 
     def validate_training_data(self):
         """
@@ -131,31 +146,38 @@ class TabularQAgent(Agent):
 
         for data in self.training_episodes:
             for iteration, state, legal_actions, action, reward, done in reversed(data):
-                if self.debug:
-                    print(f"Iter {iteration}: q-value in state {state} before update: {self.q[state]} with reward {reward} and Game Over = {done}")
-
                 self.seen_states.add(state)
+
+                # Increment visit count
+                self.q_visits[state][action] += 1
+
+                # Compute adaptive learning rate
+                alpha = self.learning_rate   #max(0.001, min(self.learning_rate, 1.0 / (1 + self.q_visits[state][action])))
+
                 # Q-learning update rule
                 if done:
                     self.q[state][action] = reward
                 else:
-                    self.q[state][action] += self.learning_rate * (reward + self.discount * next_max - self.q[state][action])
+                    dq = alpha * (reward + self.discount * next_max - self.q[state][action])
+                    self.q[state][action] += dq
 
                 next_max = np.max(self.q[state])
 
+        self.n_training += 1
+        if self.n_training % 50 == 0:
+            dq = np.sum(np.abs(self.q - self.last_q))
+            print("States seen: ", len(self.seen_states), f" Exploration: {self.exploration:.2} Cumulative Reward: {self.cumulative_rewards[-1]:.1f} LR: {self.learning_rate:.1e} DQ: {dq:.2e}")
+            self.last_q = self.q.copy()
 
-                if self.debug:
-                    print(f"q-value in state {state} after update: {self.q[state]}")
+        # move to buffer for all episodes
+        self.all_training_episodes += self.training_episodes
 
-            self.learning_rate *= self.learning_rate_decay
-
-        print("Seen ", len(self.seen_states), " out of ", self.q.shape[0], " states")
         # delete training episodes after training
         self.training_episodes = []
 
     def save_transitions(self, filepath):
         with open(filepath, 'wb') as f:
-            pickle.dump(list(self.training_episodes), f)
+            pickle.dump(list(self.all_training_episodes), f)
 
     def load_transitions(self, filepath):
         import pickle

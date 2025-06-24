@@ -8,24 +8,23 @@ from .agent_tabular_q import TabularQAgent
 
 from .config import ACTIONS, N_ACTIONS, N_STATES
 from .helpers import get_legal_actions, ascii_pictogram
-from .states_to_features import state_to_features, describe_state
+from .states_to_features import state_to_features, describe_state, reward_from_events
 
 config = {
-    "n_episode"           : 50000,   # Number of training episodes
+    "n_episode"           : 50000,  # Number of training episodes
     "n_eval"              : 100,    # Number of evaluation episodes every eval_freq training episodes
     "eval_freq"           : 1000,
     "train_freq"          : 1,      # Train models every train_freq training episodes
-    "discount"            : 0.9,    # Discount in all Q learning algorithms
-    "learning_rate_decay" : 1,
-    "exploration"         : 1.0,    # Initial exploration rate
-    "exploration_decay"   : 1e-3,   # Decrease of exploration rate for every action
+    "discount"            : 0.95,    # Discount in all Q learning algorithms
+    "exploration"         : 0.0,    # Initial exploration rate
+    "exploration_decay"   : 1e-5,   # Decrease of exploration rate for every action
     "exploration_min"     : 0.0,
-    "learning_rate"       : 0.05,
-    "learning_rate_decay" : 1,
+    "learning_rate"       : 1e-4,
+    "learning_rate_decay" : .9999,
     "randomise_order"     : False,  # Randomise starting order of agents for every game
     "only_legal_actions"  : True,   # Have agents only take legal actions
     "debug"               : False,  # Print loss and evaluation information during training
-    "initial_q"           : 0.6,    # Initial Q value for tabular Q learning
+    "initial_q"           : 0.0,      # Initial Q value for tabular Q learning
 }
 
 def setup(self):
@@ -51,10 +50,11 @@ def setup(self):
     )
 
 
-    if not self.train and os.path.isfile("q-tables/q-table_1750.pt.npz"):
+
+    if os.path.isfile("q-tables/good_agent_discount_095.npz"):
         print("loadu")
         self.logger.info("Loading model from saved state.")
-        self.agent.q = np.load("q-tables/q-table_1750.pt.npz")["q"]
+        self.agent.q = np.load("q-tables/good_agent_discount_095.npz")["q"]
 
 
 def act(self, game_state: dict) -> str:
