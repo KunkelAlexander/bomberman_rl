@@ -1,7 +1,7 @@
 import numpy as np
 
 from collections import defaultdict, deque
-from .agent_parent import Agent
+from tabular_q_agent_parent import Agent
 
 import pickle
 

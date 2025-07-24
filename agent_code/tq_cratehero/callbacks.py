@@ -6,9 +6,7 @@ import numpy as np
 
 from .agent_tabular_q import TabularQAgent
 
-from .config import ACTIONS, N_ACTIONS, N_STATES
-from .helpers import get_legal_actions, ascii_pictogram
-from .states_to_features import state_to_features, describe_state, reward_from_events
+from .helpers import get_legal_actions, ACTS, N_ACTIONS, N_STATES, state_to_features, describe_state
 
 config = {
     "n_episode"           : 50000,  # Number of training episodes
@@ -19,7 +17,8 @@ config = {
     "exploration"         : 0.0,    # Initial exploration rate
     "exploration_decay"   : 1e-5,   # Decrease of exploration rate for every action
     "exploration_min"     : 0.0,
-    "learning_rate"       : 1e-4,
+    "learning_rate_mode"  : "adaptive",
+    "learning_rate"       : 1,
     "learning_rate_decay" : .9999,
     "randomise_order"     : False,  # Randomise starting order of agents for every game
     "only_legal_actions"  : True,   # Have agents only take legal actions
@@ -51,10 +50,16 @@ def setup(self):
 
 
 
-    if os.path.isfile("q-tables/good_agent_discount_095.npz"):
-        print("loadu")
+
+    filepath = "q_table.npz"
+
+    if os.path.isfile(filepath):
+        print("loadangu")
         self.logger.info("Loading model from saved state.")
-        self.agent.q = np.load("q-tables/good_agent_discount_095.npz")["q"]
+
+        data     = np.load(filepath, allow_pickle=True)
+        self.agent.q          = data["q"]
+        self.agent.q_visits   = data["q_visits"]   # if you need visits later
 
 
 def act(self, game_state: dict) -> str:
@@ -73,6 +78,9 @@ def act(self, game_state: dict) -> str:
 
         features = state_to_features(game_state)
         print(describe_state(features))
+        print(self.agent.q[features])
+        print(self.agent.q_visits[features])
 
-    return ACTIONS[self.agent.act(features, actions=get_legal_actions(game_state=game_state))]
+    return ACTS[self.agent.act(features, actions=get_legal_actions(game_state=game_state))]
+
 

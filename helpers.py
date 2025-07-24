@@ -2,9 +2,14 @@
 # features.py
 import numpy as np
 from collections import deque
+
+import os
+import sys
+
 from settings import BOMB_POWER, BOMB_TIMER
 
-
+from typing import List
+import events as e
 
 # ---------------------------------------------------------------------------
 # constants & small helpers (unchanged unless noted)
@@ -20,6 +25,8 @@ ACT_BITS    = {a: i for i, a in enumerate(ACTS)}
 OBJ_BITS    = {a: i for i, a in enumerate(OBJS)}
 OCC_BITS    = {a: i for i, a in enumerate(OCCS)}
 
+N_ACTIONS   = len(ACTS)
+N_STATES    = 2**22
 
 # ------------- helpers ------------------------------------------------------
 def in_bounds(x, y, rows, cols):
@@ -162,16 +169,14 @@ def is_safe_tile(nx: int, ny: int,
 
 
 # ---------------------------------------------------------------------------
-# NEW   ──  compact 23‑bit state encoding  ───────────────────────────────────
+# NEW   ──  compact 22‑bit state encoding  ───────────────────────────────────
 # layout (LSB→MSB):
 #   0 – 11   neighbour occupancy (4 × 3 bits URDL)
-#   12 – 15  safety bits for URDL (1 = safe tile, 0 = impassable or deadly)
-#   16 – 18  direction (3 bits) of nearest object‑of‑interest
-#   19 – 20  object type (2 bits) 00 none, 01 enemy, 10 crate, 11 coin
-#   21       bomb available bit (can a bomb safely be dropped *now*?)
-#   22       here‑safe bit (is current tile survivable?)
+#   12 – 13  direction (2 bits) of nearest object‑of‑interest 00 up, 01 right, 10 down, 11 left
+#   14 – 15  object type (2 bits) 00 none, 01 enemy, 10 crate, 11 coin
+#   16 – 21  safety bits for URDLBW (1 = safe action, 0 = impassable or deadly)
 #
-# total: 23 bits  (still fits into a Python int)
+# total: 22 bits
 # ---------------------------------------------------------------------------
 
 
@@ -222,7 +227,7 @@ def state_to_features(game_state: dict | None) -> int | None:
 
     # ---------------------------------------------------------------- per‑direction info
     neighbour_bits = 0   # 12 bits
-    safety_bits    = 0   # 4  bits (URDL)
+    safety_bits    = 0   # 6  bits (URDLWB)
 
     for d, (dx, dy) in enumerate(DIR_VECS, start=1):   # d = 1..4 (URDL)
         nx, ny = x + dx, y + dy
@@ -246,8 +251,6 @@ def state_to_features(game_state: dict | None) -> int | None:
             safety_bits |= 1 << (d - 1)
 
     # ---------------------------------------------------------------- tile‑related bits
-    # is waiting safe?
-    wait_bit = is_safe_tile(x, y, arena, bombs, expl_map, blast_map, others)
 
     # would it still be safe after placing a bomb here?
     bombs_with_self     = list(bombs) + [((x, y), BOMB_TIMER)]
@@ -255,17 +258,27 @@ def state_to_features(game_state: dict | None) -> int | None:
     here_safe_with_bomb = is_safe_tile(x, y, arena, bombs_with_self, expl_map,
                                        blast_map_with_self, others)
 
+    # check if agent is standing on a bomb
     bomb_on_tile = any((bx, by) == (x, y) for (bx, by), _ in bombs)
-    # is placing a bomb allowed and safe?
+    # is (placing a bomb allowed & there is no bomb on the current tile & placing a bomb would not kill us)?
     bomb_bit    = int(bombs_left > 0 and not bomb_on_tile and here_safe_with_bomb)
+
+    # set 5th bit
+    if bomb_bit:
+        safety_bits |= 1 << 4
+
+    # is waiting safe?
+    wait_bit = is_safe_tile(x, y, arena, bombs, expl_map, blast_map, others)
+
+    # set 6th bit
+    if wait_bit:
+        safety_bits |= 1 << 5
 
     # ---------------------------------------------------------------- pack bits into int
     state_id = (
-        (wait_bit     << 22) |
-        (bomb_bit     << 21) |
-        (obj_bits     << 19) |
-        (dir_bits     << 16) |
-        (safety_bits  << 12) |
+        (safety_bits  << 16) |
+        (obj_bits     << 14) |
+        (dir_bits     << 12) |
         neighbour_bits
     )
 
@@ -276,26 +289,19 @@ def state_to_features(game_state: dict | None) -> int | None:
 # ---------------------------------------------------------------------------
 
 def describe_state(state_id: int) -> str:
-    wait_bit        = (state_id >> 22) & 1
-    bomb_bit        = (state_id >> 21) & 1
-    obj_bits        = (state_id >> 19) & 0b11
-    dir_bits        = (state_id >> 16) & 0b111
-    safety_bits     = (state_id >> 12) & 0b1111
-    neighbour_bits  = state_id & 0xFFF  # lower 12 bits
-    print("obj bits: ", obj_bits, " dir_bits: ", dir_bits)
-    obj_name = OBJS[obj_bits]
-    dir_name = DIRS[dir_bits]
+    safety_bits     = (state_id >> 16) & 0b111111 # 6 safety bits for ["UP", "RIGHT", "DOWN", "LEFT", "BOMB", "WAIT"]
+    obj_bits        = (state_id >> 14) & 0b11     # 2 bits for ["NONE", "ENEMY", "CRATE", "COIN"]
+    dir_bits        = (state_id >> 12) & 0b11     # 2 bits for ["UP", "RIGHT", "DOWN", "LEFT"]
+    neighbour_bits  = (state_id >>  0) & 0xFFF    # 12 bits for four directions ["UP", "RIGHT", "DOWN", "LEFT"] with the 3-bit states ["EMPTY", "WALL", "COIN", "CRATE", "ENEMY", "BOMB", "EXPLOSION"]
+    obj_name        = OBJS[obj_bits]
+    dir_name        = DIRS[dir_bits]
 
-    safe_actions = [name for d, name in enumerate(("UP", "RIGHT", "DOWN", "LEFT"), 1) if safety_bits & (1 << (d - 1))]
-    if wait_bit:
-        safe_actions += ["WAIT"]
-    if bomb_bit:
-        safe_actions += ["BOMB"]
+    safe_actions = [name for d, name in enumerate(ACTS) if safety_bits & (1 << d)]
 
     # decode neighbour occupancy
     neigh_occ = []
     for shift in (9, 6, 3, 0):
-        code = (neighbour_bits >> shift) & 3
+        code = (neighbour_bits >> shift) & 0b111  # extract 3 bits at a time
         neigh_occ.append(OCCS[code])
 
     return (
@@ -307,3 +313,83 @@ def describe_state(state_id: int) -> str:
         f"Neighbour Down    : {neigh_occ[2]}\n"
         f"Neighbour Left    : {neigh_occ[3]}"
     )
+
+
+
+def reward_from_events(self, events: List[str]) -> int:
+    """
+    *This is not a required function, but an idea to structure your code.*
+
+    Here you can modify the rewards your agent get so as to en/discourage
+    certain behavior.
+    """
+    game_rewards = {
+        e.COIN_COLLECTED:  0.2,
+        e.KILLED_OPPONENT: 1.0,
+        e.CRATE_DESTROYED: 0.1,
+        e.KILLED_SELF:    -1.0,
+        e.SURVIVED_ROUND:  1.0,
+        e.GOT_KILLED:     -0.1,
+        e.WAITED:         -0.02,
+    }
+    reward_sum = 0
+    for event in events:
+        if event in game_rewards:
+            reward_sum += game_rewards[event]
+    return reward_sum
+
+
+def get_legal_actions(game_state) -> np.ndarray:
+    """
+    Return the list of ACTION IDs that are *physically legal* in the current Bomberman state.
+    Legal = the move keeps you on the board, lands on a free tile (0 in `arena`)
+            with no bomb and no other agent occupying it.
+            'WAIT' is always legal.
+            'BOMB' is legal iff you still have bombs_left and no bomb already on your tile.
+    Explosion/danger is NOT checked here – leave that to the policy.
+    """
+    # If we have no game state (first call or game over)--everything is allowed.
+    if game_state is None:
+        return np.arange(N_ACTIONS)
+
+    arena      = game_state["field"]          # 2-D int8 array, -1: wall, 1: crate, 0: free
+    bombs      = game_state["bombs"]          # [((x, y), timer), …]
+    others     = game_state["others"]         # [(name, score, bombs_left, (x, y)), …]
+    name, score, bombs_left, (x, y) = game_state["self"]
+    rows, cols = arena.shape
+
+    # ----- helpers -----------------------------------------------------------
+    def in_bounds(cx, cy):
+        return 0 <= cx < rows and 0 <= cy < cols
+
+    def tile_is_free(cx, cy):
+        """Free = no wall/crate, no bomb, no other agent."""
+        if not in_bounds(cx, cy):
+            return False
+        if arena[cx, cy] != 0:                # wall or crate
+            return False
+        for (bx, by), _ in bombs:
+            if bx == cx and by == cy:
+                return False
+        for *_ignore, (ox, oy) in others:
+            if ox == cx and oy == cy:
+                return False
+        return True
+    # -------------------------------------------------------------------------
+
+    legal = []
+
+    # Movement actions
+    for act, (dx, dy) in zip(DIRS, DIR_VECS):
+        if tile_is_free(x + dx, y + dy):
+            legal.append(ACT_BITS[act])
+
+    # WAIT is always legal
+    legal.append(ACT_BITS['WAIT'])
+
+    # BOMB: at least one bomb left *and* no bomb already on current tile
+    if bombs_left > 0 and all((bx, by) != (x, y) for (bx, by), _ in bombs):
+        legal.append(ACT_BITS['BOMB'])
+
+    return np.array(legal, dtype=int)
+

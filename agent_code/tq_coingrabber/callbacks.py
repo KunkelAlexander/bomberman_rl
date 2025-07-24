@@ -4,9 +4,9 @@ import random
 
 import numpy as np
 
-from .agent_tabular_q import TabularQAgent
+from tabular_q_agent import TabularQAgent
 
-from .helpers import get_legal_actions, ACTS, N_ACTIONS, N_STATES, state_to_features, describe_state
+from helpers import get_legal_actions, ACTS, N_ACTIONS, N_STATES, state_to_features, describe_state
 
 config = {
     "n_episode"           : 50000,  # Number of training episodes
@@ -59,6 +59,12 @@ def setup(self):
         self.agent.q          = data["q"].item()
         self.agent.q_visits   = data["q_visits"].item()   # if you need visits later
 
+        #for k, v in self.agent.q.items():
+        #    print(20*"-")
+#
+        #    print(v)
+        #    print(describe_state(k))
+
 
 
 def act(self, game_state: dict) -> str:
@@ -76,7 +82,6 @@ def act(self, game_state: dict) -> str:
     if not self.train:
 
         features = state_to_features(game_state)
-        print(describe_state(features))
 
     return ACTS[self.agent.act(features, actions=get_legal_actions(game_state=game_state))]
 

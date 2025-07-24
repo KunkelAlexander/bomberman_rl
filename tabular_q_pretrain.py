@@ -5,7 +5,7 @@ import pickle
 import os
 
 import helpers
-import agent_tabular_q
+import tabular_q_agent
 
 def parse_args():
     p = argparse.ArgumentParser(
@@ -71,7 +71,7 @@ def main():
     }
 
     # Instantiate
-    agent = agent_tabular_q.TabularQAgent(
+    agent = tabular_q_agent.TabularQAgent(
         agent_id=0,
         n_actions=helpers.N_ACTIONS,
         n_states=helpers.N_STATES,
@@ -97,7 +97,7 @@ def main():
         q=agent.q,
         q_visits=agent.q_visits
     )
-    print(f"Saved Q-table and visit counts to {args.output_q_file}")
+    print(f"Saved Q-table of shape {len(agent.q)} and visit counts to {args.output_q_file}")
 
 
 if __name__ == "__main__":

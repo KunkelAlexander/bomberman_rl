@@ -51,8 +51,6 @@ def game_events_occurred(self,
         "action": self_action,
         "events": events
     })
-    # update prev_state pointer
-    self._prev_state = new_game_state
 
 def end_of_round(self,
                  last_game_state: dict,
