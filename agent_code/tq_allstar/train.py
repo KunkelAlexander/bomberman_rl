@@ -77,7 +77,6 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
 
     # Store the model
     if self.game % 5000 == 0:
-        np.savez  (f"q-tables/q-table_{self.game}.pt", q = self.agent.q)
         self.agent.save_transitions(f"transitions/transitions.pickle")
 
     np.savetxt("cum_rewards.txt", self.cumulative_rewards)

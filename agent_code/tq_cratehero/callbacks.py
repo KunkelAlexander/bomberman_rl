@@ -4,9 +4,9 @@ import random
 
 import numpy as np
 
-from .agent_tabular_q import TabularQAgent
+from tabular_q_agent import TabularQAgent
 
-from .helpers import get_legal_actions, ACTS, N_ACTIONS, N_STATES, state_to_features, describe_state
+from helpers import get_legal_actions, ACTS, N_ACTIONS, N_STATES, state_to_features, describe_state
 
 config = {
     "n_episode"           : 50000,  # Number of training episodes
@@ -58,8 +58,8 @@ def setup(self):
         self.logger.info("Loading model from saved state.")
 
         data     = np.load(filepath, allow_pickle=True)
-        self.agent.q          = data["q"]
-        self.agent.q_visits   = data["q_visits"]   # if you need visits later
+        self.agent.q          = data["q"].item()
+        self.agent.q_visits   = data["q_visits"].item()   # if you need visits later
 
 
 def act(self, game_state: dict) -> str:

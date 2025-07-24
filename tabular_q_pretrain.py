@@ -84,6 +84,13 @@ def main():
     agent.load_transitions(args.transitions_file)
 
     agent.start_game(is_training=True)
+
+    #training_chunk = 5000
+#
+    #while len(agent.training_episodes):
+    #    # Train
+    #    agent.train(num_episodes = training_chunk)
+#
     # Train
     agent.train()
 

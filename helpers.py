@@ -209,9 +209,7 @@ def state_to_features(game_state: dict | None) -> int | None:
     obj_bits  = OBJ_BITS["NONE"]
     dir_bits  = DIR_BITS["UP"]
 
-    in_range_enemy = enemy_dist != None and enemy_dist <= 5
-
-    if in_range_enemy:
+    if enemy_dist != None:
         obj_bits = OBJ_BITS["ENEMY"]
         dir_bits = enemy_dir
     elif coin_dist != None:
@@ -220,9 +218,6 @@ def state_to_features(game_state: dict | None) -> int | None:
     elif crate_dist != None:
         obj_bits = OBJ_BITS["CRATE"]
         dir_bits = crate_dir
-    elif enemy_dist != None:  # farther enemies are the last resort
-        obj_bits = OBJ_BITS["ENEMY"]
-        dir_bits = enemy_dir
     # else keep NONE / 00
 
     # ---------------------------------------------------------------- per‑direction info

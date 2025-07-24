@@ -3,16 +3,19 @@ import gzip
 import pickle
 from typing import List
 from tqdm import tqdm
+import os
 
 # adjust these imports if your project structure is different:
 from helpers import state_to_features, reward_from_events, ACTS, ACT_BITS
 
-def build_episodes_from_transitions(infile: str) -> List[List[List]]:
+def build_episodes_from_transitions(folder: str) -> List[List[List]]:
     """
     Load the single-file gzip of all games and convert into a list of episodes
     for TabularQAgent.training_episodes.
     """
     episodes: List[List[List]] = []
+
+    infile = os.path.join(folder, "transitions_all_games.pkl.gz")
 
     with gzip.open(infile, 'rb') as f:
         # create a progress bar for "games" (unknown total, so leave total=None)
@@ -44,19 +47,20 @@ def build_episodes_from_transitions(infile: str) -> List[List[List]]:
 
 
 def main():
-    if len(sys.argv) != 3:
+    if len(sys.argv) != 2:
         print("Usage: python build_training_episodes.py "
-              "<path/to/transitions_all_games.pkl.gz> <output_episodes.pkl>")
+              "<path/to/transitions>")
         sys.exit(1)
 
-    infile, outfile = sys.argv[1], sys.argv[2]
-    episodes = build_episodes_from_transitions(infile)
+    folder = sys.argv[1]
+    episodes = build_episodes_from_transitions(folder)
 
     # save to disk
-    with open(outfile, 'wb') as out:
+    path = os.path.join(folder, "transitions.pkl")
+    with open(path, 'wb') as out:
         pickle.dump(episodes, out)
 
-    print(f"Built and saved {len(episodes)} episodes → {outfile}")
+    print(f"Built and saved {len(episodes)} episodes → {path}")
 
 if __name__ == "__main__":
     main()

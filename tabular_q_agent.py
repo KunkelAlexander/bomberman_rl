@@ -140,19 +140,33 @@ class TabularQAgent(Agent):
             if (i1 + 1 != i2):
                 raise ValueError(f"Missing iteration between iterations {i1} and {i2} in training data")
 
-    def train(self):
+    def train(self, num_episodes=None):
         """
         Train the agent by updating Q-values based on the collected training data.
+
+        Parameters:
+        - num_episodes (int, optional): Number of episodes to use from the training_episodes buffer.
+        If None, use all available episodes.
         """
-        if not self.is_training:
+        if not self.is_training or not self.training_episodes:
             return
+
+
+        # Determine how many episodes to train on
+        if num_episodes is None:
+            episodes_to_use    = self.training_episodes
+            remaining_episodes = []
+        else:
+            episodes_to_use    = self.training_episodes[:num_episodes]
+            remaining_episodes = self.training_episodes[num_episodes:]
+
 
         next_max = None
 
         next_iteration = 0
         next_state = 0
 
-        for i, data in enumerate(self.training_episodes):
+        for i, data in enumerate(episodes_to_use):
             for iteration, state, legal_actions, action, reward, done in reversed(data):
 
                 # make sure the arrays exist before we read them
@@ -181,16 +195,17 @@ class TabularQAgent(Agent):
 
                 next_max = np.max(self.q[state])
 
-            if self.n_training_episodes % 50 == 0 and self.debug:
-                print("States seen: ", len(self.q))
-
             self.n_training_episodes += 1
 
         # move to buffer for all episodes
         self.all_training_episodes += self.training_episodes
 
-        # delete training episodes after training
-        self.training_episodes = []
+        # Move only used episodes to buffer
+        self.all_training_episodes += episodes_to_use
+
+        # Keep only remaining episodes
+        self.training_episodes = remaining_episodes
+
 
     def save_transitions(self, filepath):
         with open(filepath, 'wb') as f:
