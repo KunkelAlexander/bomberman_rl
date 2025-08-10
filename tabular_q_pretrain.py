@@ -14,8 +14,8 @@ def parse_args():
     )
 
     # I/O
-    p.add_argument("--transitions-file", "-i", required=True,
-                   help="Path to input transitions pickle (list of episodes).")
+    p.add_argument("--transitions-file", "-i", required=True, nargs="+",
+                   help="Path(s) to one or more transitions pickle files (list of episodes).")
     p.add_argument("--output-q-file", "-o", required=True,
                    help="Path to output .npz file where q and q_visits will be saved.")
 
@@ -112,10 +112,15 @@ def main():
         config=config,
     )
 
-    # Load transitions
-    if not os.path.isfile(args.transitions_file):
-        raise FileNotFoundError(f"Could not find {args.transitions_file}")
-    agent.load_transitions(args.transitions_file)
+    # Load transitions from multiple files
+    agent.training_episodes = []
+    for tf in args.transitions_file:
+        if not os.path.isfile(tf):
+            raise FileNotFoundError(f"Could not find {tf}")
+        with open(tf, "rb") as f:
+            episodes = pickle.load(f)
+        agent.training_episodes.extend(episodes)
+    print(f"Loaded {len(agent.training_episodes)} episodes from {len(args.transitions_file)} file(s).")
 
     agent.start_game(is_training=True)
 
