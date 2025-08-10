@@ -4,7 +4,7 @@ from random import shuffle
 import numpy as np
 
 import settings as s
-from .helpers import get_legal_actions, ACTS
+from helpers import get_legal_actions, ACTS
 
 def look_for_targets(free_space, start, targets, logger=None):
     """Find direction of closest target that can be reached via free tiles.
@@ -74,7 +74,8 @@ def setup(self):
     self.ignore_others_timer = 0
     self.current_round = 0
     self.exploration = 1
-    self.exploration_decay = 3e-6
+    self.exploration_decay = 1e-6
+    self.exploration_min = 0.0
 
 
 def reset_self(self):
@@ -93,7 +94,7 @@ def act(self, game_state):
     what it contains.
     """
 
-    self.exploration = self.exploration * (1 - self.exploration_decay)
+    self.exploration = np.max([self.exploration_min, self.exploration * (1 - self.exploration_decay)])
 
     # Explore
     if np.random.uniform(0, 1) < self.exploration:

@@ -18,7 +18,7 @@ def setup_training(self):
     # generate unique run name and folder
     now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     short_id = uuid.uuid4().hex[:8]
-    self.run_name = f"run_{now}_{short_id}"
+    self.run_name = "three_rule_based_peaceful_200k"#f"run_{now}_{short_id}"
     self.run_folder = os.path.join("runs", self.run_name)
     os.makedirs(self.run_folder, exist_ok=True)
 
@@ -73,7 +73,7 @@ def end_of_round(self,
         # include game index for easy splitting later
         pickle.dump({"game": self.game, "transitions": self._transitions}, f)
 
-    # (optional) clear buffer for next round
+    # clear buffer for next round
     self._transitions.clear()
     self._prev_state = None
     self.game += 1
