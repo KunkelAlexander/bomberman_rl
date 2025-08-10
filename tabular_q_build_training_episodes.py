@@ -6,7 +6,7 @@ from tqdm import tqdm
 import os
 
 # adjust these imports if your project structure is different:
-from helpers import state_to_features, reward_from_events, ACTS, ACT_BITS
+from helpers import state_to_features, reward_from_events, ACTS, ACT_BITS, ACTION, DONE, REWARD
 
 def build_episodes_from_transitions(folder: str) -> List[List[List]]:
     """
@@ -32,11 +32,21 @@ def build_episodes_from_transitions(folder: str) -> List[List[List]]:
                 state = state_to_features(step['state'])
                 legal_actions = list(range(len(ACTS)))
                 action = ACT_BITS.get(step.get('action'))
-                reward = reward_from_events(None, step.get('events', []))
+                reward = reward_from_events(step.get('events', []))
                 done   = (idx == len(transitions) - 1)
 
                 transition = [idx, state, legal_actions, action, reward, done]
                 episode.append(transition)
+
+
+
+            # Sometimes, the last action will be "None". This happens when the agent dies before choosing an action
+            # I believe that the correct way to implement this is to make the state before the terminal state
+            if episode[-1][ACTION] == None:
+                episode[-2][DONE]    = True
+                episode[-2][REWARD] += episode[-1][REWARD]
+                episode.pop()
+
 
             episodes.append(episode)
             pbar.update(1)

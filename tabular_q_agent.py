@@ -1,4 +1,5 @@
 import numpy as np
+import random
 
 from collections import defaultdict, deque
 from tabular_q_agent_parent import Agent
@@ -32,7 +33,7 @@ class TabularQAgent(Agent):
         self.debug                 = config["debug"]
         self.name                  = f"table-q agent {agent_id}"
         self.training_data         = []
-        self.training_episodes     = deque(maxlen=self.train_freq)
+        self.training_episodes     = np.array([])
         self.n_training_episodes   = 0
         self.all_training_episodes = []
         self.cumulative_reward     = 0
@@ -122,6 +123,14 @@ class TabularQAgent(Agent):
 
             self.validate_training_data()
 
+            # Sometimes, the last action will be "None". This happens when the agent dies before choosing an action
+            # I believe that the correct way to implement this is to make the state before the terminal state
+            if self.training_data[-1][self.ACTION] == None:
+                self.training_data[-2][self.DONE]    = True
+                self.training_data[-2][self.REWARD] += reward
+                self.training_data.pop()
+
+
             self.training_episodes.append(self.training_data)
             self.training_data = []
 
@@ -155,18 +164,16 @@ class TabularQAgent(Agent):
         # Determine how many episodes to train on
         if num_episodes is None:
             episodes_to_use    = self.training_episodes
-            remaining_episodes = []
+            remaining_episodes = np.array([], dtype=object)
         else:
-            episodes_to_use    = self.training_episodes[:num_episodes]
-            remaining_episodes = self.training_episodes[num_episodes:]
+            indices = np.random.permutation(num_episodes)
+            episodes_to_use    = self.training_episodes[indices[:num_episodes]]
+            remaining_episodes = self.training_episodes[indices[num_episodes:]]
 
-
-        next_max = None
-
-        next_iteration = 0
-        next_state = 0
 
         for i, data in enumerate(episodes_to_use):
+            next_max = None
+
             for iteration, state, legal_actions, action, reward, done in reversed(data):
 
                 # make sure the arrays exist before we read them
@@ -174,7 +181,8 @@ class TabularQAgent(Agent):
 
                 # Happens in the round the agent dies
                 if action == None:
-                    action = 0
+                    # This should not happen anymore in the updated code
+                    raise ValueError("action is None in training update")
 
                 # Increment visit count
                 self.q_visits[state][action] += 1
@@ -189,9 +197,15 @@ class TabularQAgent(Agent):
 
                 # Q-learning update rule
                 if done:
-                    self.q[state][action] = reward
+                    target = reward
                 else:
-                    self.q[state][action] += alpha * (reward + self.discount * next_max - self.q[state][action])
+                    # This should never happen as the first element in reversed(data) should always have done==True
+                    if next_max == None:
+                        raise ValueError("next_max is None in training update")
+                    target = reward + self.discount * next_max
+
+
+                self.q[state][action] += alpha * (target - self.q[state][action])
 
                 next_max = np.max(self.q[state])
 
@@ -214,4 +228,4 @@ class TabularQAgent(Agent):
     def load_transitions(self, filepath):
         import pickle
         with open(filepath, 'rb') as f:
-            self.training_episodes = pickle.load(f)
+            self.training_episodes = np.array(pickle.load(f))

@@ -14,6 +14,16 @@ import events as e
 # ---------------------------------------------------------------------------
 # constants & small helpers (unchanged unless noted)
 # ---------------------------------------------------------------------------
+
+# From agent.py
+ITERATION     = 0
+STATE         = 1
+LEGAL_ACTIONS = 2
+ACTION        = 3
+REWARD        = 4
+DONE          = 5
+
+
 DIR_VECS    = [(0, -1), (1, 0), (0, 1), (-1, 0)]          # WURDL
 DIRS        = ["UP", "RIGHT", "DOWN", "LEFT"]
 ACTS        = DIRS + ["BOMB", "WAIT"]
@@ -311,7 +321,7 @@ def describe_state(state_id: int) -> str:
 
 
 
-def reward_from_events(self, events: List[str]) -> int:
+def reward_from_events(events: List[str]) -> int:
     """
     *This is not a required function, but an idea to structure your code.*
 
