@@ -33,7 +33,7 @@ class TabularQAgent(Agent):
         self.debug                 = config["debug"]
         self.name                  = f"table-q agent {agent_id}"
         self.training_data         = []
-        self.training_episodes     = np.array([])
+        self.training_episodes     = []
         self.n_training_episodes   = 0
         self.all_training_episodes = []
         self.cumulative_reward     = 0
@@ -162,13 +162,15 @@ class TabularQAgent(Agent):
 
 
         # Determine how many episodes to train on
+        n = len(self.training_episodes)
+        indices = np.random.permutation(n)
+
         if num_episodes is None:
-            episodes_to_use    = self.training_episodes
-            remaining_episodes = np.array([], dtype=object)
+            episodes_to_use    = [self.training_episodes[i] for i in indices]
+            remaining_episodes = []
         else:
-            indices = np.random.permutation(num_episodes)
-            episodes_to_use    = self.training_episodes[indices[:num_episodes]]
-            remaining_episodes = self.training_episodes[indices[num_episodes:]]
+            episodes_to_use    = [self.training_episodes[i] for i in indices[:num_episodes]]
+            remaining_episodes = [self.training_episodes[i] for i in indices[num_episodes:]]
 
 
         for i, data in enumerate(episodes_to_use):
