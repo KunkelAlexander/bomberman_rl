@@ -1,8 +1,7 @@
 import numpy as np
-import random
 
 from collections import defaultdict, deque
-from tabular_q_agent_parent import Agent
+from q_agent_parent import Agent
 from helpers import TransitionFields
 import pickle
 
@@ -214,9 +213,6 @@ class TabularQAgent(Agent):
 
             self.n_training_episodes += 1
 
-        # move to buffer for all episodes
-        self.all_training_episodes += self.training_episodes
-
         # Move only used episodes to buffer
         self.all_training_episodes += episodes_to_use
 
@@ -231,4 +227,4 @@ class TabularQAgent(Agent):
     def load_transitions(self, filepath):
         import pickle
         with open(filepath, 'rb') as f:
-            self.training_episodes = np.array(pickle.load(f))
+            self.training_episodes = pickle.load(f)

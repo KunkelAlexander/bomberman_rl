@@ -121,3 +121,7 @@ agent_code/tql_demonstrator/runs/loot_crate_50k/transitions.pkl
 agent_code/tql_demonstrator/runs/three_rule_based_peaceful_50k/transitions.pkl
 
 dicts/
+agent_code/tq_demonstrator/runs/coin_heaven_50k/transitions.pkl
+agent_code/tq_demonstrator/runs/three_rule_based_peaceful_200k/transitions.pkl
+agent_code/tq_demonstrator/runs/loot_crate_50k/transitions.pkl
+agent_code/tq_demonstrator/runs/coin_heaven_50k/transitions.pkl

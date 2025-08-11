@@ -6,7 +6,7 @@ import subprocess
 import os
 
 import helpers
-import tabular_q_agent
+import q_tabular_agent
 
 def parse_args():
     p = argparse.ArgumentParser(
@@ -105,7 +105,7 @@ def main():
     }
 
     # Instantiate agent
-    agent = tabular_q_agent.TabularQAgent(
+    agent = q_tabular_agent.TabularQAgent(
         agent_id=0,
         n_actions=helpers.N_ACTIONS,
         n_states=helpers.N_STATES,

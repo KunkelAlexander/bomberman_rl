@@ -1,5 +1,6 @@
 from collections import deque
 from random import shuffle
+import logging
 
 import numpy as np
 
@@ -66,16 +67,17 @@ def setup(self):
     file for debugging (see https://docs.python.org/3.7/library/logging.html).
     """
     self.logger.debug('Successfully entered setup code')
+    self.logger.setLevel(logging.ERROR)
     np.random.seed()
     # Fixed length FIFO queues to avoid repeating the same actions
     self.bomb_history = deque([], 5)
     self.coordinate_history = deque([], 20)
     # While this timer is positive, agent will not hunt/attack opponents
     self.ignore_others_timer = 0
-    self.current_round = 0
-    self.exploration = 1
-    self.exploration_decay = 3e-6
-    self.exploration_min = 0.01
+    self.current_round       = 0
+    self.exploration         = 1
+    self.exploration_decay   = 3e-6 # This means that for an initial exploration of 1 drop to 0.05 after 100k transitions (log(0.05)/log(1-3e-6)) - 25k games assuming the agent dies after 4 steps and more if not
+    self.exploration_min   = 0.01
 
 
 def reset_self(self):

@@ -4,7 +4,7 @@ import random
 
 import numpy as np
 
-from tabular_q_agent import TabularQAgent
+from q_tabular_agent import TabularQAgent
 
 from helpers import get_legal_actions, ACTS, N_ACTIONS, N_STATES, state_to_features, describe_state
 
