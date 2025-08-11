@@ -150,7 +150,7 @@ class TabularQAgent(Agent):
             if (i1 + 1 != i2):
                 raise ValueError(f"Missing iteration between iterations {i1} and {i2} in training data")
 
-    def train(self, num_episodes=None):
+    def train(self, num_episodes=None, num_transitions=None):
         """
         Train the agent by updating Q-values based on the collected training data.
 
@@ -162,62 +162,71 @@ class TabularQAgent(Agent):
             return
 
 
-        # Determine how many episodes to train on
-        n = len(self.training_episodes)
-        indices = np.random.permutation(n)
 
-        if num_episodes is None:
+        if num_episodes is None and num_transitions is None:
+            # Determine how many episodes to train on
+            n = len(self.training_episodes)
+            indices            = np.random.permutation(n)
             episodes_to_use    = [self.training_episodes[i] for i in indices]
-            remaining_episodes = []
-        else:
+            transitions        = [transition for episode in episodes_to_use for transition in episode]
+
+            #remaining_episodes = []
+        elif num_transitions is None:
+            # Determine how many episodes to train on
+            n = len(self.training_episodes)
+            indices = np.random.permutation(n)
             episodes_to_use    = [self.training_episodes[i] for i in indices[:num_episodes]]
-            remaining_episodes = [self.training_episodes[i] for i in indices[num_episodes:]]
+            #remaining_episodes = [self.training_episodes[i] for i in indices[num_episodes:]]
+            transitions        = [transition for episode in episodes_to_use for transition in episode]
+        else:
+            all_transitions        = [transition for episode in self.training_episodes for transition in episode]
+            # Determine how many transitions to train on
+            n = len(all_transitions)
+            indices = np.random.permutation(n)
+            print(f"Picking {num_transitions} from {n} transistions")
+            transitions = [all_transitions[i] for i in indices[:num_transitions]]
 
 
-        for i, data in enumerate(episodes_to_use):
-            next_max = None
-
-            for iteration, state, legal_actions, action, reward, done, next_state, next_legal_actions in reversed(data):
-
-                # make sure the arrays exist before we read them
-                self._ensure_state(state)
-
-                # This should not happen anymore in the updated code
-                if action == None:
-                    raise ValueError("action is None in training update")
-
-                # Increment visit count
-                self.q_visits[state][action] += 1
-
-                if self.learning_rate_mode == "adaptive":
-                    # Compute adaptive learning rate
-                    alpha = max(0.001, min(self.learning_rate, 1.0 / (1 + self.q_visits[state][action])))
-                elif self.learning_rate_mode == "fixed":
-                    alpha = self.learning_rate
-                else:
-                    raise ValueError("Unknown learning_rate_mode")
-
-                # Q-learning update rule
-                if done:
-                    target = reward
-                else:
-                    # This should never happen as the first element in reversed(data) should always have done==True
-                    if next_max == None:
-                        raise ValueError("next_max is None in training update")
-                    target = reward + self.discount * next_max
 
 
-                self.q[state][action] += alpha * (target - self.q[state][action])
 
-                next_max = np.max(self.q[state])
+        for iteration, state, legal_actions, action, reward, done, next_state, next_legal_actions in transitions:
 
-            self.n_training_episodes += 1
+            # make sure the arrays exist before we read them
+            self._ensure_state(state)
+
+            # This should not happen anymore in the updated code
+            if action == None:
+                raise ValueError("action is None in training update")
+
+            # Increment visit count
+            self.q_visits[state][action] += 1
+
+            if self.learning_rate_mode == "adaptive":
+                # Compute adaptive learning rate
+                alpha = max(1e-6, min(self.learning_rate, 1.0 / (1 + self.q_visits[state][action])))
+            elif self.learning_rate_mode == "fixed":
+                alpha = self.learning_rate
+            else:
+                raise ValueError("Unknown learning_rate_mode")
+
+            # Q-learning update rule
+            if done:
+                target = reward
+            else:
+                self._ensure_state(next_state)  # make sure it's initialized
+                next_max = np.max(self.q[next_state])
+                target = reward + self.discount * next_max
+
+
+            self.q[state][action] += alpha * (target - self.q[state][action])
+
 
         # Move only used episodes to buffer
-        self.all_training_episodes += episodes_to_use
+        #self.all_training_episodes += episodes_to_use
 
         # Keep only remaining episodes
-        self.training_episodes = remaining_episodes
+        #self.training_episodes = remaining_episodes
 
 
     def save_transitions(self, filepath):
