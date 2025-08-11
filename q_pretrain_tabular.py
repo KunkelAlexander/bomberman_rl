@@ -132,10 +132,10 @@ def main():
     base_name = os.path.splitext(os.path.basename(args.output_q_file))[0]
 
     chunk_idx = 1
-    while len(agent.training_episodes):
+    while chunk_idx < 50:
         print(f"{len(agent.training_episodes)} episodes remaining. "
               f"Visited {len(agent.q)} states")
-        agent.train(num_episodes=args.training_chunk)
+        agent.train(num_transitions=args.training_chunk)
         save_snapshot(agent, out_dir, base_name, chunk_idx)
 
         # Optional evaluation
