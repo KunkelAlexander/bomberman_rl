@@ -18,7 +18,7 @@ def setup_training(self):
     # generate unique run name and folder
     now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     short_id = uuid.uuid4().hex[:8]
-    self.run_name = "three_rule_based_peaceful_200k"#f"run_{now}_{short_id}"
+    self.run_name = f"run_{now}_{short_id}"
     self.run_folder = os.path.join("runs", self.run_name)
     os.makedirs(self.run_folder, exist_ok=True)
 
@@ -40,8 +40,7 @@ def game_events_occurred(self,
                          new_game_state: dict,
                          events: List[str]):
     """
-    Record the transition: on the very first step we store the full old_game_state,
-    thereafter we store only the diff from prev_state → new_game_state.
+    Record the transition
     """
     # RECORDING LOGIC:
 

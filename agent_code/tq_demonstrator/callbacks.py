@@ -74,8 +74,8 @@ def setup(self):
     self.ignore_others_timer = 0
     self.current_round = 0
     self.exploration = 1
-    self.exploration_decay = 1e-6
-    self.exploration_min = 0.0
+    self.exploration_decay = 3e-6
+    self.exploration_min = 0.01
 
 
 def reset_self(self):
@@ -221,3 +221,6 @@ def act(self, game_state):
                 self.bomb_history.append((x, y))
 
             return a
+
+    # Wait if not action_idea was in valid actions (e.g. the agent found a target but pursuing it was too dangerous)
+    return "WAIT"
