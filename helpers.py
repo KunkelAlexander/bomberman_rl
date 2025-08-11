@@ -2,6 +2,7 @@
 # features.py
 import numpy as np
 from collections import deque
+from enum import IntEnum
 
 import os
 import sys
@@ -15,14 +16,16 @@ import events as e
 # constants & small helpers (unchanged unless noted)
 # ---------------------------------------------------------------------------
 
-# From agent.py
-ITERATION     = 0
-STATE         = 1
-LEGAL_ACTIONS = 2
-ACTION        = 3
-REWARD        = 4
-DONE          = 5
 
+class TransitionFields(IntEnum):
+    ITERATION          = 0
+    STATE              = 1
+    LEGAL_ACTIONS      = 2
+    ACTION             = 3
+    REWARD             = 4
+    DONE               = 5
+    NEXT_STATE         = 6
+    NEXT_LEGAL_ACTIONS = 7
 
 DIR_VECS    = [(0, -1), (1, 0), (0, 1), (-1, 0)]          # WURDL
 DIRS        = ["UP", "RIGHT", "DOWN", "LEFT"]
@@ -39,6 +42,64 @@ N_ACTIONS   = len(ACTS)
 N_STATES    = 2**22
 
 # ------------- helpers ------------------------------------------------------
+def print_game_ascii(game_state):
+    """
+    Prints an ASCII representation of the full game state for debugging purposes.
+    Legend:
+      # = Wall
+      % = Crate
+      . = Free tile
+      x = Explosion
+      b = Bomb (with timer)
+      C = Coin
+      P = Player (yourself)
+      E = Enemy
+    """
+    if game_state is None:
+        print("No game state available.")
+        return
+
+    field = game_state['field'].copy()
+    expl_map = game_state['explosion_map']
+    bombs = dict(game_state['bombs'])  # {(x, y): timer}
+    coins = set(game_state['coins'])
+    others = {pos for *_n, pos in game_state['others']}
+    self_pos = game_state['self'][-1]
+
+    rows, cols = field.shape
+    display = [[' ' for _ in range(cols)] for _ in range(rows)]
+
+    for x in range(rows):
+        for y in range(cols):
+            if field[x, y] == -1:
+                display[x][y] = '#'
+            elif field[x, y] == 1:
+                display[x][y] = '%'
+            elif expl_map[x, y] > 0:
+                display[x][y] = 'x'
+            else:
+                display[x][y] = '.'
+
+    for (bx, by), t in game_state['bombs']:
+        display[bx][by] = str(t)
+
+    for cx, cy in coins:
+        display[cx][cy] = 'C'
+
+    for ox, oy in others:
+        display[ox][oy] = 'E'
+
+    px, py = self_pos
+    display[px][py] = 'P'
+
+    print("\nASCII game state:")
+    for y in range(cols):
+        line = ""
+        for x in range(rows):
+            line += display[x][y]
+        print(line)
+
+
 def in_bounds(x, y, rows, cols):
     return 0 <= x < rows and 0 <= y < cols
 
