@@ -74,12 +74,12 @@ def act(self, game_state: dict) -> str:
 
     features = state_to_features(game_state)
 
-    if not self.train:
-        features = state_to_features(game_state)
-        print(describe_state(features))
-        print(self.agent.q.get(features, "Not yet in Q-table"))
-        print(self.agent.q_visits.get(features, "Not yet in Q-visit-table"))
-
+    #if not self.train:
+    #    features = state_to_features(game_state)
+    #    print(describe_state(features))
+    #    print(self.agent.q.get(features, "Not yet in Q-table"))
+    #    print(self.agent.q_visits.get(features, "Not yet in Q-visit-table"))
+#
     return ACTS[self.agent.act(features, actions=get_legal_actions(game_state=game_state))]
 
 

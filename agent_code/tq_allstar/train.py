@@ -23,7 +23,6 @@ def setup_training(self):
     self.cumulative_reward = 0
     self.cumulative_rewards = []
     self.exploration_rates  = []
-    self.agent.load_transitions(f"transitions/1000_transitions.pickle")
 
 
 def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_state: dict, events: List[str]):

@@ -4,7 +4,6 @@ from typing import List
 import events as e
 from helpers import get_legal_actions, state_to_features, reward_from_events, ACTS, N_ACTIONS, N_STATES, ACT_BITS
 import numpy as np
-import logging
 
 def setup_training(self):
     """
@@ -22,7 +21,6 @@ def setup_training(self):
     self.cumulative_reward = 0
     self.cumulative_rewards = []
     self.exploration_rates  = []
-    self.logger.setLevel(logging.ERROR)
 
 
 def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_state: dict, events: List[str]):
