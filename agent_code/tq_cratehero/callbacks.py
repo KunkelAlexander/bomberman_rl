@@ -54,7 +54,7 @@ def setup(self):
     filepath = "q_table.npz"
 
     if os.path.isfile(filepath):
-        print("loadangu")
+        print("Loading model from saved state.")
         self.logger.info("Loading model from saved state.")
 
         data     = np.load(filepath, allow_pickle=True)
@@ -75,11 +75,10 @@ def act(self, game_state: dict) -> str:
     features = state_to_features(game_state)
 
     if not self.train:
-
         features = state_to_features(game_state)
         print(describe_state(features))
-        print(self.agent.q[features])
-        print(self.agent.q_visits[features])
+        print(self.agent.q.get(features, "Not yet in Q-table"))
+        print(self.agent.q_visits.get(features, "Not yet in Q-visit-table"))
 
     return ACTS[self.agent.act(features, actions=get_legal_actions(game_state=game_state))]
 
