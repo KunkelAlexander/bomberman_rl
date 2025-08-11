@@ -6,7 +6,7 @@ from tqdm import tqdm
 import os
 
 # adjust these imports if your project structure is different:
-from helpers import state_to_features, reward_from_events, ACTS, ACT_BITS, ACTION, DONE, REWARD
+from helpers import print_game_ascii, state_to_features, reward_from_events, ACTS, ACT_BITS, TransitionFields
 
 def build_episodes_from_transitions(folder: str) -> List[List[List]]:
     """
@@ -29,24 +29,25 @@ def build_episodes_from_transitions(folder: str) -> List[List[List]]:
             transitions = rec['transitions']
             episode = []
             for idx, step in enumerate(transitions):
-                state = state_to_features(step['state'])
+                state         = state_to_features(step['state'])
                 legal_actions = list(range(len(ACTS)))
-                action = ACT_BITS.get(step.get('action'))
-                reward = reward_from_events(step.get('events', []))
-                done   = (idx == len(transitions) - 1)
+                action        = ACT_BITS[step['action']]
+                # Happens if agent cannot find a valid action because of bombs
+                if action is None: raise ValueError("action == None")
 
-                transition = [idx, state, legal_actions, action, reward, done]
+                reward        = reward_from_events(step['events'])
+                done          = (idx == len(transitions) - 1)
+                transition    = [idx, state, legal_actions, action, reward, done]
                 episode.append(transition)
 
+            # Second pass – enrich with next_state and next_legal_actions
+            for i in range(len(episode) - 1):
+                next_state         = episode[i + 1][TransitionFields.STATE]
+                next_legal_actions = episode[i + 1][TransitionFields.LEGAL_ACTIONS]
+                episode[i].extend([next_state, next_legal_actions])
 
-
-            # Sometimes, the last action will be "None". This happens when the agent dies before choosing an action
-            # I believe that the correct way to implement this is to make the state before the terminal state
-            if episode[-1][ACTION] == None:
-                episode[-2][DONE]    = True
-                episode[-2][REWARD] += episode[-1][REWARD]
-                episode.pop()
-
+            # No next states and next legal actions in terminal state
+            episode[-1].extend([None, None])
 
             episodes.append(episode)
             pbar.update(1)

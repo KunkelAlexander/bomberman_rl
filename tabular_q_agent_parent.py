@@ -1,10 +1,4 @@
 class Agent:
-    ITERATION = 0
-    STATE = 1
-    LEGAL_ACTIONS = 2
-    ACTION = 3
-    REWARD = 4
-    DONE = 5
 
     def __init__(self, agent_id: int, n_actions: int):
         """

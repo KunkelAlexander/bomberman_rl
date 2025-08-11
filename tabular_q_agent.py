@@ -3,7 +3,7 @@ import random
 
 from collections import defaultdict, deque
 from tabular_q_agent_parent import Agent
-
+from helpers import TransitionFields
 import pickle
 
 class TabularQAgent(Agent):
@@ -118,17 +118,19 @@ class TabularQAgent(Agent):
         self.cumulative_reward += reward
 
         if self.is_training:
-            self.training_data[-1][self.DONE]    = True
-            self.training_data[-1][self.REWARD] += reward
+            self.training_data[-1][TransitionFields.DONE]    = True
+            self.training_data[-1][TransitionFields.REWARD] += reward
 
             self.validate_training_data()
 
-            # Sometimes, the last action will be "None". This happens when the agent dies before choosing an action
-            # I believe that the correct way to implement this is to make the state before the terminal state
-            if self.training_data[-1][self.ACTION] == None:
-                self.training_data[-2][self.DONE]    = True
-                self.training_data[-2][self.REWARD] += reward
-                self.training_data.pop()
+            # Second pass – enrich with next_state and next_legal_actions
+            for i in range(len(self.training_data) - 1):
+                next_state         = self.training_data[i + 1][TransitionFields.STATE]
+                next_legal_actions = self.training_data[i + 1][TransitionFields.LEGAL_ACTIONS]
+                self.training_data[i].extend([next_state, next_legal_actions])
+
+            # No next states and next legal actions in terminal state
+            self.training_data[-1].extend([None, None])
 
 
             self.training_episodes.append(self.training_data)
@@ -144,8 +146,8 @@ class TabularQAgent(Agent):
 
         for i in range(len(self.training_data) - 1):
             # Validate iteration number
-            i1 = self.training_data[i][self.ITERATION]
-            i2 = self.training_data[i+1][self.ITERATION]
+            i1 = self.training_data[i][TransitionFields.ITERATION]
+            i2 = self.training_data[i+1][TransitionFields.ITERATION]
             if (i1 + 1 != i2):
                 raise ValueError(f"Missing iteration between iterations {i1} and {i2} in training data")
 
@@ -176,14 +178,13 @@ class TabularQAgent(Agent):
         for i, data in enumerate(episodes_to_use):
             next_max = None
 
-            for iteration, state, legal_actions, action, reward, done in reversed(data):
+            for iteration, state, legal_actions, action, reward, done, next_state, next_legal_actions in reversed(data):
 
                 # make sure the arrays exist before we read them
                 self._ensure_state(state)
 
-                # Happens in the round the agent dies
+                # This should not happen anymore in the updated code
                 if action == None:
-                    # This should not happen anymore in the updated code
                     raise ValueError("action is None in training update")
 
                 # Increment visit count
