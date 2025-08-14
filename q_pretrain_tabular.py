@@ -24,9 +24,20 @@ def parse_args():
     p.add_argument("--learning-rate-mode", "-m", choices=["fixed", "adaptive"], default="adaptive")
     p.add_argument("--learning-rate", "-l", type=float, default=1e-1)
     p.add_argument("--learning-rate-decay", "-d", type=float, default=0.9999)
-    p.add_argument("--initial-q", "-q", type=float, default=0.0)
-    p.add_argument("--training-chunk", "-c", type=int, default=2500)
+    p.add_argument("--initial-q", "-q", type=float, default=0.7)
+    group = p.add_mutually_exclusive_group(required=True)
+    group.add_argument("--training-transitions", "-tt", type=int,
+                       help="Train on a fixed number of transitions per chunk.")
+    group.add_argument("--training-episodes", "-te", type=int,
+                       help="Train on a fixed number of episodes per chunk.")
+    p.add_argument("--num-chunks", type=int, default=10, help="Number of training chunks to run.")
     p.add_argument("--debug", action="store_true")
+
+    # Agent config (additional)
+    p.add_argument("--train-freq", type=int, default=1, help="Training frequency.")
+    p.add_argument("--exploration", type=float, default=0.0)
+    p.add_argument("--exploration-decay", type=float, default=0.0)
+    p.add_argument("--exploration-min", type=float, default=0.0)
 
     # Evaluation options
     p.add_argument("--evaluate", action="store_true",
@@ -45,14 +56,12 @@ def parse_args():
 
 def save_snapshot(agent, out_dir, base_name, chunk_idx):
     """Save intermediate .npz and pickle snapshots."""
-    # Main .npz file (overwrites each time for latest)
     np.savez(
         os.path.join(out_dir, base_name + ".npz"),
         q=agent.q,
         q_visits=agent.q_visits
     )
 
-    # Dict pickle subfolder
     dicts_dir = os.path.join(out_dir, "dicts")
     os.makedirs(dicts_dir, exist_ok=True)
 
@@ -63,11 +72,10 @@ def save_snapshot(agent, out_dir, base_name, chunk_idx):
 
     print(f"[Chunk {chunk_idx}] Saved snapshot to {out_dir}")
 
-import subprocess
 
 def evaluate_agent(chunk_idx, out_dir, args):
     """Run main.py play with the trained agent and save stats."""
-    dicts_dir =  os.path.join(out_dir, "dicts")
+    dicts_dir = os.path.join(out_dir, "dicts")
     stats_file = os.path.join(dicts_dir, f"eval_chunk_{chunk_idx:04d}.json")
 
     cmd = [
@@ -90,7 +98,6 @@ def evaluate_agent(chunk_idx, out_dir, args):
 def main():
     args = parse_args()
 
-    # Build config dict for the agent
     config = {
         "discount": args.discount,
         "learning_rate_mode": args.learning_rate_mode,
@@ -98,13 +105,12 @@ def main():
         "learning_rate_decay": args.learning_rate_decay,
         "initial_q": args.initial_q,
         "debug": args.debug,
-        "train_freq": getattr(args, "train_freq", 1),
-        "exploration": getattr(args, "exploration", 0.0),
-        "exploration_decay": getattr(args, "exploration_decay", 0.0),
-        "exploration_min": getattr(args, "exploration_min", 0.0),
+        "train_freq": args.train_freq,
+        "exploration": args.exploration,
+        "exploration_decay": args.exploration_decay,
+        "exploration_min": args.exploration_min,
     }
 
-    # Instantiate agent
     agent = q_tabular_agent.TabularQAgent(
         agent_id=0,
         n_actions=helpers.N_ACTIONS,
@@ -112,7 +118,6 @@ def main():
         config=config,
     )
 
-    # Load transitions from multiple files
     agent.training_episodes = []
     for tf in args.transitions_file:
         if not os.path.isfile(tf):
@@ -124,25 +129,30 @@ def main():
 
     agent.start_game(is_training=True)
 
-    # Prepare output directories
     out_dir = os.path.dirname(args.output_q_file)
     if out_dir and not os.path.isdir(out_dir):
         os.makedirs(out_dir, exist_ok=True)
-
     base_name = os.path.splitext(os.path.basename(args.output_q_file))[0]
 
     chunk_idx = 1
-    while chunk_idx < 50:
+    while chunk_idx <= args.num_chunks:
         print(f"{len(agent.training_episodes)} episodes remaining. "
               f"Visited {len(agent.q)} states")
-        agent.train(num_transitions=args.training_chunk)
+
+        train_kwargs = {}
+        if args.training_transitions is not None:
+            train_kwargs["num_transitions"] = args.training_transitions
+        elif args.training_episodes is not None:
+            train_kwargs["num_episodes"] = args.training_episodes
+
+        agent.train(**train_kwargs)
         save_snapshot(agent, out_dir, base_name, chunk_idx)
 
-        # Optional evaluation
         if args.evaluate:
             evaluate_agent(chunk_idx, out_dir, args)
 
         chunk_idx += 1
+
 
     print("Training complete.")
 
