@@ -26,6 +26,30 @@ config = {
     "initial_q"           : 0.0,      # Initial Q value for tabular Q learning
 }
 
+
+def load_snapshot(agent, out_dir, chunk_idx):
+    """Load saved snapshot from pickle files."""
+
+    # Dict pickle subfolder path
+    dicts_dir = os.path.join(out_dir, "dicts")
+
+    # Form the file paths for the specific chunk index
+    q_file_path = os.path.join(dicts_dir, f"q_chunk_{chunk_idx:04d}.pkl")
+    q_visits_file_path = os.path.join(dicts_dir, f"q_visits_chunk_{chunk_idx:04d}.pkl")
+
+    if os.path.isfile(q_file_path) and os.path.isfile(q_visits_file_path):
+        print("Loading model from pickled files.")
+
+        # Load the Q-table and Q-visits from pickle files
+        with open(q_file_path, "rb") as f_q:
+            agent.q = pickle.load(f_q)
+
+        with open(q_visits_file_path, "rb") as f_qv:
+            agent.q_visits = pickle.load(f_qv)
+    else:
+        print("Pickle files not found. Please check the paths.")
+
+
 def setup(self):
     """
     Setup your code. This is called once when loading each agent.
@@ -57,9 +81,11 @@ def setup(self):
         print("Loading model from saved state.")
         self.logger.info("Loading model from saved state.")
 
-        data     = np.load(filepath, allow_pickle=True)
-        self.agent.q          = data["q"].item()
-        self.agent.q_visits   = data["q_visits"].item()   # if you need visits later
+        load_snapshot(self.agent, "./", 9)
+
+        #data     = np.load(filepath, allow_pickle=True)
+        #self.agent.q          = data["q"].item()
+        #self.agent.q_visits   = data["q_visits"].item()   # if you need visits later
 
 
 def act(self, game_state: dict) -> str:

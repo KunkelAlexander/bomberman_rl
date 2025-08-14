@@ -18,9 +18,6 @@ def setup_training(self):
     self.agent.start_game(is_training=True)
     self.iteration = 0
     self.game = 0
-    self.cumulative_reward = 0
-    self.cumulative_rewards = []
-    self.exploration_rates  = []
 
 
 def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_state: dict, events: List[str]):
@@ -44,12 +41,10 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
 
     reward = reward_from_events(self, events)
 
-    self.cumulative_reward += reward
-
     # state_to_features is defined in callbacks.py
     self.agent.update(iteration = self.iteration,
                       state = state_to_features(old_game_state),
-                      legal_actions = np.arange(N_ACTIONS-1),
+                      legal_actions = get_legal_actions(old_game_state),
                       action = ACT_BITS[self_action],
                       reward = reward,
                       done = False)
@@ -74,26 +69,13 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
 
     self.agent.update(iteration = self.iteration,
                       state = state_to_features(last_game_state),
-                      legal_actions = np.arange(N_ACTIONS-1),
+                      legal_actions = get_legal_actions(last_game_state),
                       action = ACT_BITS[last_action],
                       reward = reward,
                       done = True)
     self.agent.final_update(reward = 0) # All the final rewards are handed out before, no additional reward is necessary
     self.agent.train()
 
-
-    # Store the model
-    if self.game % 5000 == 0:
-        np.savez  (f"q-tables/q-table_{self.game}.pt", q = self.agent.q)
-        self.agent.save_transitions(f"transitions/transitions.pickle")
-
-    np.savetxt("logs/cum_rewards.txt", self.cumulative_rewards)
-    np.savetxt("logs/exp_rates.txt", self.exploration_rates)
-
-    self.cumulative_reward += reward
-    self.cumulative_rewards.append(self.cumulative_reward)
-    self.exploration_rates.append(self.agent.exploration)
-    self.cumulative_reward = 0
 
     self.iteration += 1
     self.game += 1

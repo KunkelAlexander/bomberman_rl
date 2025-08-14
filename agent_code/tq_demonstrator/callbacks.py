@@ -73,9 +73,9 @@ def setup(self):
     # While this timer is positive, agent will not hunt/attack opponents
     self.ignore_others_timer = 0
     self.current_round       = 0
-    self.exploration         = 0.5
-    self.exploration_decay   = 3e-6 # This means that for an initial exploration of 1 drop to 0.05 after 100k transitions (log(0.05)/log(1-3e-6)) - 25k games assuming the agent dies after 4 steps and more if not
-    self.exploration_min     = 0.01
+    self.exploration         = 0.3
+    self.exploration_decay   = 1e-6 # This means that for an initial exploration of 1 drop to 0.05 after 100k transitions (log(0.05)/log(1-3e-6)) - 25k games assuming the agent dies after 4 steps and more if not
+    self.exploration_min     = 0.1
 
 
 def reset_self(self):

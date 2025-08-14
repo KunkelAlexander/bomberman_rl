@@ -26,6 +26,8 @@ config = {
     "initial_q"           : 0.0,      # Initial Q value for tabular Q learning
 }
 
+
+
 def setup(self):
     """
     Setup your code. This is called once when loading each agent.

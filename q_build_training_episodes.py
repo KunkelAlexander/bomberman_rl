@@ -6,7 +6,7 @@ from tqdm import tqdm
 import os
 
 # adjust these imports if your project structure is different:
-from helpers import print_game_ascii, state_to_features, reward_from_events, ACTS, ACT_BITS, TransitionFields
+from helpers import print_game_ascii, state_to_features, reward_from_events, ACTS, ACT_BITS, TransitionFields, get_legal_actions
 
 def build_episodes_from_transitions(folder: str) -> List[List[List]]:
     """
@@ -30,7 +30,7 @@ def build_episodes_from_transitions(folder: str) -> List[List[List]]:
             episode = []
             for idx, step in enumerate(transitions):
                 state         = state_to_features(step['state'])
-                legal_actions = list(range(len(ACTS)))
+                legal_actions = get_legal_actions(step['state'])
                 action        = ACT_BITS[step['action']]
                 # Happens if agent cannot find a valid action because of bombs
                 if action is None: raise ValueError("action == None")

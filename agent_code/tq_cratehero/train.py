@@ -2,10 +2,8 @@ import pickle
 from typing import List
 
 import events as e
-from .callbacks import state_to_features, reward_from_events
-from .config import ACTIONS, N_ACTIONS, N_STATES, ACTION_STRING_TO_ID
+from helpers import get_legal_actions, state_to_features, reward_from_events, ACTS, N_ACTIONS, N_STATES, ACT_BITS
 import numpy as np
-
 
 def setup_training(self):
     """
@@ -20,10 +18,6 @@ def setup_training(self):
     self.agent.start_game(is_training=True)
     self.iteration = 0
     self.game = 0
-    self.cumulative_reward = 0
-    self.cumulative_rewards = []
-    self.exploration_rates  = []
-    self.agent.load_transitions(f"transitions/1000_transitions.pickle")
 
 
 def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_state: dict, events: List[str]):
@@ -47,10 +41,13 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
 
     reward = reward_from_events(self, events)
 
-    self.cumulative_reward += reward
-
     # state_to_features is defined in callbacks.py
-    self.agent.update(iteration = self.iteration, state = state_to_features(old_game_state), legal_actions = np.arange(N_ACTIONS-1), action = ACTION_STRING_TO_ID[self_action], reward = reward, done = False)
+    self.agent.update(iteration = self.iteration,
+                      state = state_to_features(old_game_state),
+                      legal_actions = get_legal_actions(old_game_state),
+                      action = ACT_BITS[self_action],
+                      reward = reward,
+                      done = False)
     self.iteration += 1
 
 def end_of_round(self, last_game_state: dict, last_action: str, events: List[str]):
@@ -70,22 +67,15 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
 
     reward = reward_from_events(self, events)
 
-    self.agent.update(iteration = self.iteration, state = state_to_features(last_game_state), legal_actions = np.arange(N_ACTIONS-1), action = ACTION_STRING_TO_ID[last_action], reward = reward, done = True)
+    self.agent.update(iteration = self.iteration,
+                      state = state_to_features(last_game_state),
+                      legal_actions = get_legal_actions(last_game_state),
+                      action = ACT_BITS[last_action],
+                      reward = reward,
+                      done = True)
     self.agent.final_update(reward = 0) # All the final rewards are handed out before, no additional reward is necessary
     self.agent.train()
 
-
-    # Store the model
-    if self.game % 5000 == 0:
-        self.agent.save_transitions(f"transitions/transitions.pickle")
-
-    np.savetxt("cum_rewards.txt", self.cumulative_rewards)
-    np.savetxt("exp_rates.txt", self.exploration_rates)
-
-    self.cumulative_reward += reward
-    self.cumulative_rewards.append(self.cumulative_reward)
-    self.exploration_rates.append(self.agent.exploration)
-    self.cumulative_reward = 0
 
     self.iteration += 1
     self.game += 1
