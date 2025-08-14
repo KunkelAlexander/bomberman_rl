@@ -203,8 +203,7 @@ class TabularQAgent(Agent):
             self.q_visits[state][action] += 1
 
             if self.learning_rate_mode == "adaptive":
-                # Compute adaptive learning rate
-                alpha = max(1e-6, min(self.learning_rate, 1.0 / (1 + self.q_visits[state][action])))
+                alpha = max(1e-3, min(self.learning_rate, 1.0 / (1 + self.q_visits[state][action])))
             elif self.learning_rate_mode == "fixed":
                 alpha = self.learning_rate
             else:
@@ -215,15 +214,20 @@ class TabularQAgent(Agent):
                 target = reward
             else:
                 self._ensure_state(next_state)  # make sure it's initialized
-                next_max = np.max(self.q[next_state])
+
+
+                if next_legal_actions is None or len(next_legal_actions) == 0:
+                    # no legal next actions at terminal-like next state
+                    next_max = 0.0
+                else:
+                    # Ensure next_legal_actions are valid integer indices
+                    nla = np.asarray(next_legal_actions, dtype=int)
+                    next_max = np.max(self.q[next_state][nla])
+
                 target = reward + self.discount * next_max
 
 
             self.q[state][action] += alpha * (target - self.q[state][action])
-
-
-        # Move only used episodes to buffer
-        #self.all_training_episodes += episodes_to_use
 
         # Keep only remaining episodes
         #self.training_episodes = remaining_episodes
