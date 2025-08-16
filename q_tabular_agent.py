@@ -21,6 +21,9 @@ class TabularQAgent(Agent):
         # instead of a big array, use a defaultdict that creates a vector of size n_actions
         self.q                     = {}  # state → np.array of shape (n_actions,)
         self.q_visits              = {}  # state → np.array of ints (n_actions,)
+        self.q_td_error            = {}  # state -> np.array (n_actions,), latest delta per action
+        self.q_update_mag          = {}  # state -> np.array (n_actions,), latest |alpha*delta|
+
         self.train_freq            = config["train_freq"]
         self.discount              = config["discount"]
         self.learning_rate_mode    = config["learning_rate_mode"]
@@ -41,8 +44,11 @@ class TabularQAgent(Agent):
     def _ensure_state(self, state):
         """Create Q & visits arrays for a new state if needed."""
         if state not in self.q:
-            self.q[state]        = np.ones(self.n_actions) * self.initial_q
-            self.q_visits[state] = np.zeros(self.n_actions, dtype=int)
+            self.q[state]            = np.ones(self.n_actions) * self.initial_q
+            self.q_visits[state]     = np.zeros(self.n_actions, dtype=int)
+            self.q_td_error[state]   = np.zeros_like(self.q[state], dtype=float)
+            self.q_update_mag[state] = np.zeros_like(self.q[state], dtype=float)
+
 
     def start_game(self, is_training: bool):
         """
@@ -170,15 +176,17 @@ class TabularQAgent(Agent):
             episodes_to_use    = [self.training_episodes[i] for i in indices]
             transitions        = [transition for episode in episodes_to_use for transition in episode]
 
-            #remaining_episodes = []
+            remaining_episodes = []
+
         elif num_transitions is None:
             # Determine how many episodes to train on
             n = len(self.training_episodes)
-            indices = np.random.permutation(n)
+            indices            = np.arange(n) # Deterministic training
             episodes_to_use    = [self.training_episodes[i] for i in indices[:num_episodes]]
-            #remaining_episodes = [self.training_episodes[i] for i in indices[num_episodes:]]
+            remaining_episodes = [self.training_episodes[i] for i in indices[num_episodes:]]
             transitions        = [transition for episode in episodes_to_use for transition in episode]
         else:
+            remaining_episodes     = self.training_episodes
             all_transitions        = [transition for episode in self.training_episodes for transition in episode]
             # Determine how many transitions to train on
             n = len(all_transitions)
@@ -203,7 +211,7 @@ class TabularQAgent(Agent):
             self.q_visits[state][action] += 1
 
             if self.learning_rate_mode == "adaptive":
-                alpha = max(1e-3, min(self.learning_rate, 1.0 / (1 + self.q_visits[state][action])))
+                alpha = self.learning_rate / (1 + self.q_visits[state][action])
             elif self.learning_rate_mode == "fixed":
                 alpha = self.learning_rate
             else:
@@ -217,20 +225,27 @@ class TabularQAgent(Agent):
 
 
                 if next_legal_actions is None or len(next_legal_actions) == 0:
-                    # no legal next actions at terminal-like next state
-                    next_max = 0.0
-                else:
-                    # Ensure next_legal_actions are valid integer indices
-                    nla = np.asarray(next_legal_actions, dtype=int)
-                    next_max = np.max(self.q[next_state][nla])
+                    raise ValueError("This should only happen in terminal states")
+
+                # Ensure next_legal_actions are valid integer indices
+                nla = np.asarray(next_legal_actions, dtype=int)
+                next_max = np.max(self.q[next_state][nla])
 
                 target = reward + self.discount * next_max
 
+            # --- compute TD error and apply update ---
+            q_old  = self.q[state][action]
+            delta  = target - q_old                 # TD error
+            update = alpha * delta                  # actual Q-step (signed)
 
-            self.q[state][action] += alpha * (target - self.q[state][action])
+            self.q[state][action] = q_old + update  # Q update
 
-        # Keep only remaining episodes
-        #self.training_episodes = remaining_episodes
+            # --- log metrics (latest values) ---
+            self.q_td_error[state][action]   = float(delta)        # signed TD error
+            self.q_update_mag[state][action] = float(abs(update))  # magnitude of update
+
+        # Keep only remaining episodes in some training modes
+        self.training_episodes = remaining_episodes
 
 
     def save_transitions(self, filepath):
