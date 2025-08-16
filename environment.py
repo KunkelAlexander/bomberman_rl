@@ -16,6 +16,7 @@ import settings as s
 from agents import Agent, SequentialAgentBackend
 from fallbacks import pygame
 from items import Coin, Explosion, Bomb
+from helpers import state_to_features, describe_state
 
 WorldArgs = namedtuple("WorldArgs",
                        ["no_gui", "fps", "turn_based", "update_interval", "save_replay", "replay", "make_video", "continue_without_training", "log_dir", "save_stats", "match_name", "seed", "silence_errors", "scenario"])
@@ -606,6 +607,19 @@ class GUI:
             self.render_text(f'{a.total_score:d}', 890, y_base + 50 * i, (64, 64, 64),
                              valign='center', halign='right', size='big')
 
+
+        # Find the tq_ agent and compute its state_id for debug rendering
+        for a in self.world.active_agents:
+            if a.name.startswith("tq_") or a.name.startswith("user_"):
+                self.world.user_input = None
+                agent_state = self.world.get_state_for_agent(a)
+                if agent_state is not None:
+                    features = state_to_features(agent_state)
+                    if features is not None:
+                        self.debug_state_id = features
+
+        self.render_debug_info(self.debug_state_id)
+
         # End of round info
         if not self.world.running:
             x_center = (s.WIDTH - s.GRID_OFFSET[0] - s.COLS * s.GRID_SIZE) / 2 + s.GRID_OFFSET[0] + s.COLS * s.GRID_SIZE
@@ -657,3 +671,19 @@ class GUI:
         self.world.logger.info("Done writing videos.")
         for f in self.screenshot_dir.glob(f'{self.world.round_id}_*.png'):
             f.unlink()
+
+    def render_debug_info(self, state_id, x_base=600, y_base=400, line_height=14):
+        # Render the heading
+        self.render_text("State Debug Info", x_base, y_base,
+                        color=(255, 255, 0), size='big', halign='left')
+
+        # Offset for the rest of the lines (leave a gap after the heading)
+        text_y = y_base + line_height + 20
+
+        debug_text = describe_state(state_id)
+        lines = debug_text.splitlines()
+
+        for i, line in enumerate(lines):
+            self.render_text(line, x_base, text_y + i * line_height,
+                            color=(200, 200, 200), size='small', halign='left')
+
