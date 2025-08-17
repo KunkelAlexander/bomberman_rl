@@ -1,10 +1,7 @@
 # Q‑Learning with **BombeRLe**
 
 This repository implements both **tabular Q‑learning** and a **Deep Q‑Network (DQN)** for the classic game *Bomberman* using the BombeRLe environment.
-
-![Gameplay](figures/1_gameplay.gif)
-
----
+<img src="figures/1_gameplay.gif" width=100%>
 
 ## Table of contents
 
@@ -23,7 +20,6 @@ This repository implements both **tabular Q‑learning** and a **Deep Q‑Networ
 * [License](#license)
 * [Citation](#citation)
 
----
 
 ## Project structure
 
