@@ -4,7 +4,7 @@ from random import shuffle
 import numpy as np
 
 import settings as s
-from helpers import get_legal_actions, ACTS
+from q_helpers import get_legal_actions, ACTS
 
 def look_for_targets(free_space, start, targets, logger=None):
     """Find direction of closest target that can be reached via free tiles.

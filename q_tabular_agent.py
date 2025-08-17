@@ -2,7 +2,7 @@ import numpy as np
 
 from collections import defaultdict, deque
 from q_agent_parent import Agent
-from helpers import TransitionFields
+from q_helpers import TransitionFields
 import pickle
 
 class TabularQAgent(Agent):

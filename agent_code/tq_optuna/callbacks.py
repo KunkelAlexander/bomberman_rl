@@ -6,7 +6,7 @@ import numpy as np
 
 from q_tabular_agent import TabularQAgent
 
-from helpers import get_legal_actions, ACTS, N_ACTIONS, N_STATES, state_to_features, describe_state
+from q_helpers import get_legal_actions, ACTS, N_ACTIONS, N_STATES, state_to_features, describe_state
 
 config = {
     "n_episode"           : 50000,  # Number of training episodes

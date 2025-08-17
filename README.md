@@ -51,14 +51,10 @@ All **new agents** live under the `agent_code/` directory. A typical layout look
 
 ## Agents
 
-* **tq\_coingrabber** – agent trained for coin‑heaven scenario.
-* **tq\_cratehero** – agent trained for loot‑crate scenario.
-* **tq\_allstar** – agent trained on multi‑opponent games.
-* **tq\_demonstrator** – **new** helper agent based on `rule_based_agent` that **stores transitions** from every time‑step while it plays. It is used to generate supervised/offline training data for the tabular and DQN pipelines.
-
-### `tq_demonstrator` (data recorder)
-
-Add the following to your agent’s `callbacks.py` to enable per‑time‑step **transition recording**. It creates a unique run folder (e.g. `runs/run_YYYYMMDD_HHMMSS_<id>/`) and appends all game transitions into a compressed pickle stream `transitions_all_games.pkl.gz`.
+* **tq\_coingrabber** – tabular Q-agent trained for coin‑heaven scenario.
+* **tq\_cratehero** – tabular Q-agent trained for loot‑crate scenario.
+* **tq\_allstar** – tabular Q-agent trained on multi‑opponent games.
+* **tq\_demonstrator** – **new** helper agent based on `rule_based_agent` that **stores transitions** from every time‑step while it plays. It is used to generate supervised/offline training data for the tabular and DQN pipelines. It creates a unique run folder (e.g. `runs/run_YYYYMMDD_HHMMSS_<id>/`) and appends all game transitions into a compressed pickle stream `transitions_all_games.pkl.gz`.
 
 ## Usage
 
@@ -66,7 +62,7 @@ Below are minimal, end‑to‑end scripts to **reproduce the results** shown in 
 
 ### Coingrabber
 
-1. **Generate and store raw game data** (dictionary at every time‑step):
+1. **Generate and store raw game data** (game state dictionary at every time‑step):
 
 ```bash
 python3 main.py play \
@@ -75,7 +71,7 @@ python3 main.py play \
   --scenario coin-heaven --no-gui
 ```
 
-2. **Convert the training data** (tuples of `(states, actions, rewards)`):
+2. **Convert the raw game data to training data** (use state representation and rewards to create tuples tuples of `(states, actions, rewards)`):
 
 ```bash
 python3 q_build_training_episodes.py agent_code/tq_demonstrator/runs/coin_heaven_50k/
@@ -186,6 +182,7 @@ python3 main.py play --agents tq_allstar peaceful_agent rule_based_agent rule_ba
 The Q‑learning training and utilities are split across the following files:
 
 * `q_tabular_agent.py` – **Tabular Q‑learning core** (Q‑table updates, ε‑greedy policy, etc.).
+* `q_helpers.py` – **Tabular Q‑learning core** (state representation, rewards, etc.).
 * `q_train_tabular.py` – Training loop for the tabular agent.
 * `q_pretrain_tabular.py` – Offline pre‑training from recorded transitions / episodes.
 * `q_deep_agent.py` – DQN implementation.

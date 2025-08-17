@@ -11,7 +11,7 @@ from tensorflow.keras import layers, models
 
 from q_agent_parent import Agent
 from q_prioritised_experience_replay import PrioritizedReplayBuffer
-from helpers import TransitionFields
+from q_helpers import TransitionFields
 
 # Define a directory to save checkpoints and logs
 checkpoint_dir = 'checkpoints'

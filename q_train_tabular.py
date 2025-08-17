@@ -5,7 +5,7 @@ import pickle
 import subprocess
 import os
 
-import helpers
+import q_helpers
 import q_tabular_agent
 
 def parse_args():
@@ -132,8 +132,8 @@ def main():
 
     agent = q_tabular_agent.TabularQAgent(
         agent_id=0,
-        n_actions=helpers.N_ACTIONS,
-        n_states=helpers.N_STATES,
+        n_actions=q_helpers.N_ACTIONS,
+        n_states=q_helpers.N_STATES,
         config=config,
     )
 

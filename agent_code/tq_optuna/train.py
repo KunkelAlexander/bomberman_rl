@@ -2,7 +2,7 @@ import pickle
 from typing import List
 
 import events as e
-from helpers import get_legal_actions, state_to_features, reward_from_events, ACTS, N_ACTIONS, N_STATES, ACT_BITS
+from q_helpers import get_legal_actions, state_to_features, reward_from_events, ACTS, N_ACTIONS, N_STATES, ACT_BITS
 import numpy as np
 
 def setup_training(self):
