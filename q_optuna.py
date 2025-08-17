@@ -16,15 +16,14 @@ def run_training(params):
 
     cmd = [
         "python3", MAIN_SCRIPT,
-        "--transitions-file", "agent_code/tq_demonstrator/runs/three_rule_based_peaceful_50k/transitions.pkl",  # Change as needed
+        "--transitions-file", "agent_code/tq_demonstrator/runs/loot_crate_50k_16bit/transitions.pkl",  # Change as needed
         "--output-q-file", output_q_file,
         "--training-episodes", "50000",
         "--num-chunks", "1",
         "--evaluate",
-        "--agents", "tq_optuna", "rule_based_agent", "rule_based_agent", "rule_based_agent",
-        "--main-py", "main.py",
-        "--scenario", "classic",
-        "--eval-rounds", "10",
+        "--agents", "tq_optuna",
+        "--scenario", "loot-crate",
+        "--eval-rounds", "30",
         "--initial-q", str(params["initial_q"]),
         "--learning-rate", str(params["learning_rate"]),
         "--learning-rate-mode", params["learning_rate_mode"],

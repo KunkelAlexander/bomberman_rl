@@ -77,7 +77,7 @@ def act(self, game_state: dict) -> str:
 
     features = state_to_features(game_state)
 
-    if not self.train and False:
+    if not self.train:
         print(" | ".join(
             f"{a[:1]}: {self.agent.q[features][i]:.2f}" +
             (f" ({self.agent.q_visits[features][i]:.1e}x)" if features in self.agent.q_visits else "")

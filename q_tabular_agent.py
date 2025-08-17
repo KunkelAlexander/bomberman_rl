@@ -205,13 +205,6 @@ class TabularQAgent(Agent):
             # make sure the arrays exist before we read them
             self._ensure_state(state)
 
-            # This should not happen anymore in the updated code
-            if action == None:
-                raise ValueError("action is None in training update")
-
-            # Increment visit count
-            self.q_visits[state][action] += 1
-
             if self.learning_rate_mode == "adaptive":
                 alpha = self.learning_rate / (1 + self.q_visits[state][action])
             elif self.learning_rate_mode == "fixed":
@@ -219,15 +212,14 @@ class TabularQAgent(Agent):
             else:
                 raise ValueError("Unknown learning_rate_mode")
 
+            # Increment visit count
+            self.q_visits[state][action] += 1
+
             # Q-learning update rule
             if done:
                 target = reward
             else:
                 self._ensure_state(next_state)  # make sure it's initialized
-
-
-                if next_legal_actions is None or len(next_legal_actions) == 0:
-                    raise ValueError("This should only happen in terminal states")
 
                 # Ensure next_legal_actions are valid integer indices
                 nla = np.asarray(next_legal_actions, dtype=int)

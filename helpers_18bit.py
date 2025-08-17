@@ -27,7 +27,7 @@ class TransitionFields(IntEnum):
     NEXT_STATE         = 6
     NEXT_LEGAL_ACTIONS = 7
 
-DIR_VECS    = [(0, -1), (1, 0), (0, 1), (-1, 0)]          # URDL
+DIR_VECS    = [(0, -1), (1, 0), (0, 1), (-1, 0)]          # WURDL
 DIRS        = ["UP", "RIGHT", "DOWN", "LEFT"]
 ACTS        = DIRS + ["BOMB", "WAIT"]
 OBJS        = ["NONE", "ENEMY", "CRATE", "COIN"]
@@ -282,7 +282,7 @@ def state_to_features(game_state: dict | None) -> int | None:
     return state_id
 
 # ---------------------------------------------------------------------------
-# helper: human‑readable description of a 18‑bit state id
+# helper: human‑readable description of a 16‑bit state id
 # ---------------------------------------------------------------------------
 
 def describe_state(state_id: int) -> str:
@@ -292,7 +292,7 @@ def describe_state(state_id: int) -> str:
     dir_bits        = (state_id >> 12) & 0b11     # 2 bits for ["UP", "RIGHT", "DOWN", "LEFT"]
     neighbour_bits  = (state_id >>  0) & 0xFFF    # 12 bits for four directions ["UP", "RIGHT", "DOWN", "LEFT"] with the 3-bit states ["EMPTY", "WALL", "COIN", "CRATE", "ENEMY", "BOMB", "EXPLOSION"]
     dir_name        = DIRS[dir_bits]
-    obj_name        = OBJS[obj_bits]
+    obj_name        = DIRS[obj_bits]
 
     # decode neighbour occupancy
     neigh_occ = []
@@ -301,7 +301,7 @@ def describe_state(state_id: int) -> str:
         neigh_occ.append(OCCS[code])
 
     return (
-        f"State bits        : {state_id:018b}\n"
+        f"State bits        : {state_id:016b}\n"
         f"Nearest interest  : {obj_name} ({dir_name})\n"
         f"May wait          : {wait_bit}\n"
         f"May place bomb    : {bomb_bit}\n"

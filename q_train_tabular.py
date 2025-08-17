@@ -20,7 +20,7 @@ def parse_args():
     # Hyperparameters
     p.add_argument("--discount", type=float, default=0.8, help="Discount factor γ")
     p.add_argument("--learning-rate-mode", "-m", choices=["fixed", "adaptive"], default="adaptive")
-    p.add_argument("--learning-rate", "-l", type=float, default=1e-2)
+    p.add_argument("--learning-rate", "-l", type=float, default=1e-0)
     p.add_argument("--learning-rate-decay", "-d", type=float, default=0.9999)
     p.add_argument("--initial-q", "-q", type=float, default=0.0)
     p.add_argument("--num-chunks", type=int, default=10, help="Number of training chunks to run.")

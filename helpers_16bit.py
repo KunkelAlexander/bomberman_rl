@@ -27,7 +27,7 @@ class TransitionFields(IntEnum):
     NEXT_STATE         = 6
     NEXT_LEGAL_ACTIONS = 7
 
-DIR_VECS    = [(0, -1), (1, 0), (0, 1), (-1, 0)]          # WURDL
+DIR_VECS    = [(0, -1), (1, 0), (0, 1), (-1, 0)]          # URDL
 DIRS        = ["UP", "RIGHT", "DOWN", "LEFT"]
 ACTS        = DIRS + ["BOMB", "WAIT"]
 OBJS        = ["NONE", "ENEMY", "CRATE", "COIN"]
@@ -55,6 +55,8 @@ def dir_and_dist_bfs(start, goals, arena, bombs, others):
     Return (dir, dist) where
         dir  = 0-4 (WURDL) for the *nearest* goal (None if no goal)
         dist = #steps to that goal   (None if no goal)
+
+        dir_and_dist_bfs only checks arena[nx, ny] == 0. It can “see” a target through bombs/agents and point you straight into them.
     """
     if not goals:
         return None, None
@@ -233,14 +235,14 @@ def state_to_features(game_state: dict | None) -> int | None:
         # ---- 3‑bit OCCUPANCY ----------------------------------------------
         if arena[nx, ny] == -1:
             occ = OCC_BITS["WALL"]
+        elif not is_safe_tile(nx, ny, arena, bombs, expl_map, blast_map, others):
+            occ = OCC_BITS["EXPLOSION"]
         elif arena[nx, ny] == 1:
             occ = OCC_BITS["CRATE"]
         elif any((nx, ny) == pos for *_n, pos in others):
             occ = OCC_BITS["ENEMY"]
         elif any((nx, ny) == pos for pos, _ in bombs):
             occ = OCC_BITS["BOMB"]
-        elif not is_safe_tile(nx, ny, arena, bombs, expl_map, blast_map, others):
-            occ = OCC_BITS["EXPLOSION"]
         elif (nx, ny) in coins:
             occ = OCC_BITS["COIN"]
         else:

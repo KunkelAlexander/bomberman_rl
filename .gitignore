@@ -117,6 +117,7 @@ results/
 *.gif
 *.gz
 *.pickle
+*.pkl
 agent_code/tql_demonstrator/runs/loot_crate_50k/transitions.pkl
 agent_code/tql_demonstrator/runs/three_rule_based_peaceful_50k/transitions.pkl
 
