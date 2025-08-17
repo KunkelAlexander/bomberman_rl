@@ -48,7 +48,7 @@ All **new agents** live under the `agent_code/` directory. A typical layout look
 * **tq\_coingrabber** – tabular Q-agent trained for coin‑heaven scenario.
 * **tq\_cratehero** – tabular Q-agent trained for loot‑crate scenario.
 * **tq\_allstar** – tabular Q-agent trained on multi‑opponent games.
-* **tq\_demonstrator** – **new** helper agent based on `rule_based_agent` that **stores transitions** from every time‑step while it plays. It is used to generate supervised/offline training data for the tabular and DQN pipelines. It creates a unique run folder (e.g. `runs/run_YYYYMMDD_HHMMSS_<id>/`) and appends all game transitions into a compressed pickle stream `transitions_all_games.pkl.gz`.
+* **tq\_demonstrator** – helper agent based on `rule_based_agent` that **stores transitions** from every time‑step while it plays. It is used to generate supervised/offline training data for the tabular and DQN pipelines. It creates a unique run folder (e.g. `runs/run_YYYYMMDD_HHMMSS_<id>/`) and appends all game transitions into a compressed pickle stream `transitions_all_games.pkl.gz`. In contrast to the rule-based agent, it also makes random moves in the beginning to let the agent explore more.
 
 ## Usage
 

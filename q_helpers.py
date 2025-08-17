@@ -31,7 +31,7 @@ DIR_VECS    = [(0, -1), (1, 0), (0, 1), (-1, 0)]          # URDL
 DIRS        = ["UP", "RIGHT", "DOWN", "LEFT"]
 ACTS        = DIRS + ["BOMB", "WAIT"]
 OBJS        = ["NONE", "ENEMY", "CRATE", "COIN"]
-OCCS        = ["EMPTY", "WALL", "COIN", "CRATE", "ENEMY", "BOMB", "EXPLOSION"]
+OCCS        = ["EMPTY", "WALL", "COIN", "CRATE", "ENEMY", "BOMB", "DANGER"]
 
 DIR_BITS    = {a: i for i, a in enumerate(DIRS)}
 ACT_BITS    = {a: i for i, a in enumerate(ACTS)}
@@ -236,17 +236,18 @@ def state_to_features(game_state: dict | None) -> int | None:
     for d, (dx, dy) in enumerate(DIR_VECS, start=1):   # d = 1..4 (URDL)
         nx, ny = x + dx, y + dy
 
+
         # ---- 3‑bit OCCUPANCY ----------------------------------------------
         if arena[nx, ny] == -1:
             occ = OCC_BITS["WALL"]
         elif arena[nx, ny] == 1:
             occ = OCC_BITS["CRATE"]
-        elif any((nx, ny) == pos for *_n, pos in others):
-            occ = OCC_BITS["ENEMY"]
         elif any((nx, ny) == pos for pos, _ in bombs):
             occ = OCC_BITS["BOMB"]
+        elif any((nx, ny) == pos for *_n, pos in others):
+            occ = OCC_BITS["ENEMY"]
         elif not is_safe_tile(nx, ny, arena, bombs, expl_map, blast_map, others):
-            occ = OCC_BITS["EXPLOSION"]
+            occ = OCC_BITS["DANGER"]
         elif (nx, ny) in coins:
             occ = OCC_BITS["COIN"]
         else:
@@ -290,7 +291,7 @@ def describe_state(state_id: int) -> str:
     bomb_bit        = (state_id >> 16) & 0b1      # May (safely) use bomb
     obj_bits        = (state_id >> 14) & 0b11     # 2 bits for ["NONE", "ENEMY", "CRATE", "COIN"]
     dir_bits        = (state_id >> 12) & 0b11     # 2 bits for ["UP", "RIGHT", "DOWN", "LEFT"]
-    neighbour_bits  = (state_id >>  0) & 0xFFF    # 12 bits for four directions ["UP", "RIGHT", "DOWN", "LEFT"] with the 3-bit states ["EMPTY", "WALL", "COIN", "CRATE", "ENEMY", "BOMB", "EXPLOSION"]
+    neighbour_bits  = (state_id >>  0) & 0xFFF    # 12 bits for four directions ["UP", "RIGHT", "DOWN", "LEFT"] with the 3-bit states ["EMPTY", "WALL", "COIN", "CRATE", "ENEMY", "BOMB", "DANGER", "ENEMY_IN_DANGER"]
     dir_name        = DIRS[dir_bits]
     obj_name        = OBJS[obj_bits]
 
