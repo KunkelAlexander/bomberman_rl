@@ -182,7 +182,7 @@ python3 main.py play --agents tq_allstar peaceful_agent rule_based_agent rule_ba
 The Q‑learning training and utilities are split across the following files:
 
 * `q_tabular_agent.py` – **Tabular Q‑learning core** (Q‑table updates, ε‑greedy policy, etc.).
-* `q_helpers.py` – **Tabular Q‑learning core** (state representation, rewards, etc.).
+* `q_helpers.py` – **Q‑learning helpers** (define state representation, set rewards, etc.).
 * `q_train_tabular.py` – Training loop for the tabular agent.
 * `q_pretrain_tabular.py` – Offline pre‑training from recorded transitions / episodes.
 * `q_deep_agent.py` – DQN implementation.
@@ -200,4 +200,4 @@ The Q‑learning training and utilities are split across the following files:
 
 ## License
 
-Add your license here (e.g. MIT).
+![MIT License](LICENSE)
