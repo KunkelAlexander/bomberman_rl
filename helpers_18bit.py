@@ -31,7 +31,7 @@ DIR_VECS    = [(0, -1), (1, 0), (0, 1), (-1, 0)]          # WURDL
 DIRS        = ["UP", "RIGHT", "DOWN", "LEFT"]
 ACTS        = DIRS + ["BOMB", "WAIT"]
 OBJS        = ["NONE", "ENEMY", "CRATE", "COIN"]
-OCCS        = ["EMPTY", "WALL", "COIN", "CRATE", "ENEMY", "BOMB", "EXPLOSION"]
+OCCS        = ["EMPTY", "WALL", "COIN", "CRATE", "ENEMY", "BOMB", "DANGER"]
 
 DIR_BITS    = {a: i for i, a in enumerate(DIRS)}
 ACT_BITS    = {a: i for i, a in enumerate(ACTS)}
@@ -246,7 +246,7 @@ def state_to_features(game_state: dict | None) -> int | None:
         elif any((nx, ny) == pos for pos, _ in bombs):
             occ = OCC_BITS["BOMB"]
         elif not is_safe_tile(nx, ny, arena, bombs, expl_map, blast_map, others):
-            occ = OCC_BITS["EXPLOSION"]
+            occ = OCC_BITS["DANGER"]
         elif (nx, ny) in coins:
             occ = OCC_BITS["COIN"]
         else:
