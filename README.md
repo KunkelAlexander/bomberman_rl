@@ -7,18 +7,12 @@ This repository implements both **tabular Q‑learning** and a **Deep Q‑Networ
 
 * [Project structure](#project-structure)
 * [Agents](#agents)
-
-  * [tq\_demonstrator (data recorder)](#tq_demonstrator-data-recorder)
-  * [Exploration logic used for data collection](#exploration-logic-used-for-data-collection)
-* [Usage](#usage)
-
   * [Coingrabber](#coingrabber)
   * [Crate‑hero](#crate-hero)
   * [Allstar](#allstar)
 * [Training / code layout](#training--code-layout)
 * [Tips & notes](#tips--notes)
 * [License](#license)
-* [Citation](#citation)
 
 
 ## Project structure
