@@ -609,6 +609,7 @@ class GUI:
 
 
         # Find the tq_ agent and compute its state_id for debug rendering
+        debug_str = ""
         for a in self.world.active_agents:
             if a.name.startswith("tq_") or a.name.startswith("user_"):
                 self.world.user_input = None
@@ -617,8 +618,11 @@ class GUI:
                     features = state_to_features(agent_state)
                     if features is not None:
                         self.debug_state_id = features
+                        debug_str = describe_state(self.debug_state_id)
 
-        self.render_debug_info(self.debug_state_id)
+
+
+        self.render_debug_info(debug_str)
 
         # End of round info
         if not self.world.running:
@@ -672,7 +676,7 @@ class GUI:
         for f in self.screenshot_dir.glob(f'{self.world.round_id}_*.png'):
             f.unlink()
 
-    def render_debug_info(self, state_id, x_base=600, y_base=400, line_height=14):
+    def render_debug_info(self, debug_text, x_base=600, y_base=300, line_height=14):
         # Render the heading
         self.render_text("State Debug Info", x_base, y_base,
                         color=(255, 255, 0), size='big', halign='left')
@@ -680,7 +684,6 @@ class GUI:
         # Offset for the rest of the lines (leave a gap after the heading)
         text_y = y_base + line_height + 20
 
-        debug_text = describe_state(state_id)
         lines = debug_text.splitlines()
 
         for i, line in enumerate(lines):

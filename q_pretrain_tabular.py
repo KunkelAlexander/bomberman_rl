@@ -24,20 +24,20 @@ def parse_args():
     p.add_argument("--learning-rate-mode", "-m", choices=["fixed", "adaptive"], default="adaptive")
     p.add_argument("--learning-rate", "-l", type=float, default=1e-1)
     p.add_argument("--learning-rate-decay", "-d", type=float, default=0.9999)
-    p.add_argument("--initial-q", "-q", type=float, default=0.7)
+    p.add_argument("--initial-q", "-q", type=float, default=0.0)
     group = p.add_mutually_exclusive_group(required=True)
     group.add_argument("--training-transitions", "-tt", type=int,
-                       help="Train on a fixed number of transitions per chunk.")
+                       help="Train on a fixed number of transitions per chunk. This training is random (The transitions are shuffled)")
     group.add_argument("--training-episodes", "-te", type=int,
-                       help="Train on a fixed number of episodes per chunk.")
+                       help="Train on a fixed number of episodes per chunk. This training is deterministic (The episodes are not shuffled)")
     p.add_argument("--num-chunks", type=int, default=10, help="Number of training chunks to run.")
     p.add_argument("--debug", action="store_true")
 
     # Agent config (additional)
     p.add_argument("--train-freq", type=int, default=1, help="Training frequency.")
-    p.add_argument("--exploration", type=float, default=0.0)
+    p.add_argument("--exploration", type=float, default=0.1)
     p.add_argument("--exploration-decay", type=float, default=0.0)
-    p.add_argument("--exploration-min", type=float, default=0.0)
+    p.add_argument("--exploration-min", type=float, default=0.1)
 
     # Evaluation options
     p.add_argument("--evaluate", action="store_true",
@@ -53,24 +53,44 @@ def parse_args():
 
     return p.parse_args()
 
+def save_snapshot(agent, out_dir, base_name, chunk_idx=None, compressed=True):
+    """
+    Writes a single NPZ containing all dicts + metadata.
+    Dicts are saved as 0-D object arrays so they round-trip cleanly.
+    """
+    out_dir2 = os.path.join(out_dir, "dicts")
+    os.makedirs(out_dir,  exist_ok=True)
+    os.makedirs(out_dir2, exist_ok=True)
+    fname = f"{base_name}{'' if chunk_idx is None else f'_chunk_{chunk_idx:04d}'}"
+    path = os.path.join(out_dir2, f"{fname}.npz")
+    base_fname = f"{base_name}"
+    bpath = os.path.join(out_dir, f"{base_fname}.npz")
 
-def save_snapshot(agent, out_dir, base_name, chunk_idx):
-    """Save intermediate .npz and pickle snapshots."""
-    np.savez(
-        os.path.join(out_dir, base_name + ".npz"),
-        q=agent.q,
-        q_visits=agent.q_visits
-    )
+    payload = {
+        "q":            np.array(agent.q,            dtype=object),
+        "q_visits":     np.array(agent.q_visits,     dtype=object),
+        "q_td_error":   np.array(agent.q_td_error,   dtype=object),
+        "q_update_mag": np.array(agent.q_update_mag, dtype=object),
+        "meta": np.array({
+            "chunk_idx":          chunk_idx,
+            "train_step":         getattr(agent, "_train_step", None),
+            "learning_rate":      getattr(agent, "learning_rate", None),
+            "learning_rate_mode": getattr(agent, "learning_rate_mode", None),
+            "discount":           getattr(agent, "discount", None),
+            "epsilon":            getattr(agent, "epsilon", None),
+            "notes": "All dicts stored as 0-D object arrays; load with allow_pickle=True and .item().",
+        }, dtype=object),
+    }
 
-    dicts_dir = os.path.join(out_dir, "dicts")
-    os.makedirs(dicts_dir, exist_ok=True)
+    if compressed:
+        np.savez_compressed(path, **payload)
+        np.savez_compressed(bpath, **payload)
+    else:
+        np.savez(path, **payload)
+        np.savez(bpath, **payload)
 
-    with open(os.path.join(dicts_dir, f"q_chunk_{chunk_idx:04d}.pkl"), "wb") as f_q:
-        pickle.dump(agent.q, f_q)
-    with open(os.path.join(dicts_dir, f"q_visits_chunk_{chunk_idx:04d}.pkl"), "wb") as f_qv:
-        pickle.dump(agent.q_visits, f_qv)
-
-    print(f"[Chunk {chunk_idx}] Saved snapshot to {out_dir}")
+    print(f"[Chunk {chunk_idx}] Saved single-archive snapshot to {path}")
+    return path
 
 
 def evaluate_agent(chunk_idx, out_dir, args):
@@ -152,6 +172,7 @@ def main():
             evaluate_agent(chunk_idx, out_dir, args)
 
         chunk_idx += 1
+
 
 
     print("Training complete.")

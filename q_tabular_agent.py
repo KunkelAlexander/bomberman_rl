@@ -168,23 +168,25 @@ class TabularQAgent(Agent):
             return
 
 
-
+        # Use all episodes for deterministic training and remove them from the buffer
         if num_episodes is None and num_transitions is None:
             # Determine how many episodes to train on
             n = len(self.training_episodes)
-            indices            = np.random.permutation(n)
+            indices            = np.arange(n) # Deterministic training
             episodes_to_use    = [self.training_episodes[i] for i in indices]
-            transitions        = [transition for episode in episodes_to_use for transition in episode]
+            transitions        = [transition for episode in reversed(episodes_to_use) for transition in episode]
 
             remaining_episodes = []
 
+        # Use the given number of episodes for determistic training and remove them from the buffer
         elif num_transitions is None:
             # Determine how many episodes to train on
             n = len(self.training_episodes)
             indices            = np.arange(n) # Deterministic training
             episodes_to_use    = [self.training_episodes[i] for i in indices[:num_episodes]]
             remaining_episodes = [self.training_episodes[i] for i in indices[num_episodes:]]
-            transitions        = [transition for episode in episodes_to_use for transition in episode]
+            transitions        = [transition for episode in reversed(episodes_to_use) for transition in episode]
+        # Use a given number of transitions for randomised training and do not remove them from the buffer
         else:
             remaining_episodes     = self.training_episodes
             all_transitions        = [transition for episode in self.training_episodes for transition in episode]
@@ -234,11 +236,10 @@ class TabularQAgent(Agent):
                 target = reward + self.discount * next_max
 
             # --- compute TD error and apply update ---
-            q_old  = self.q[state][action]
-            delta  = target - q_old                 # TD error
+            delta  = target - self.q[state][action] # TD error
             update = alpha * delta                  # actual Q-step (signed)
 
-            self.q[state][action] = q_old + update  # Q update
+            self.q[state][action] += update  # Q update
 
             # --- log metrics (latest values) ---
             self.q_td_error[state][action]   = float(delta)        # signed TD error

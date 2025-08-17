@@ -39,7 +39,7 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     """
     self.logger.debug(f'Encountered game event(s) {", ".join(map(repr, events))} in step {new_game_state["step"]}')
 
-    reward = reward_from_events(self, events)
+    reward = reward_from_events(events)
 
     # state_to_features is defined in callbacks.py
     self.agent.update(iteration = self.iteration,
@@ -65,7 +65,7 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     """
     self.logger.debug(f'Encountered event(s) {", ".join(map(repr, events))} in final step')
 
-    reward = reward_from_events(self, events)
+    reward = reward_from_events(events)
 
     self.agent.update(iteration = self.iteration,
                       state = state_to_features(last_game_state),
@@ -76,6 +76,12 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     self.agent.final_update(reward = 0) # All the final rewards are handed out before, no additional reward is necessary
     self.agent.train()
 
+
+    np.savez(
+        "q_table.npz",
+        q=self.agent.q,
+        q_visits=self.agent.q_visits
+    )
 
     self.iteration += 1
     self.game += 1

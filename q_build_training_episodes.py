@@ -6,7 +6,7 @@ from tqdm import tqdm
 import os
 
 # adjust these imports if your project structure is different:
-from helpers import print_game_ascii, state_to_features, reward_from_events, ACTS, ACT_BITS, TransitionFields, get_legal_actions
+from helpers import state_to_features, reward_from_events, ACTS, ACT_BITS, TransitionFields, get_legal_actions
 
 def build_episodes_from_transitions(folder: str) -> List[List[List]]:
     """

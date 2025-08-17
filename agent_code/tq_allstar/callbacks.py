@@ -81,11 +81,9 @@ def setup(self):
         print("Loading model from saved state.")
         self.logger.info("Loading model from saved state.")
 
-        load_snapshot(self.agent, "./", 9)
-
-        #data     = np.load(filepath, allow_pickle=True)
-        #self.agent.q          = data["q"].item()
-        #self.agent.q_visits   = data["q_visits"].item()   # if you need visits later
+        data     = np.load(filepath, allow_pickle=True)
+        self.agent.q          = data["q"].item()
+        self.agent.q_visits   = data["q_visits"].item()   # if you need visits later
 
 
 def act(self, game_state: dict) -> str:
