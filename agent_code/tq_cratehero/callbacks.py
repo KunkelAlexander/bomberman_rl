@@ -9,17 +9,16 @@ from q_tabular_agent import TabularQAgent
 from q_helpers import get_legal_actions, ACTS, N_ACTIONS, N_STATES, state_to_features, describe_state
 
 config = {
-    "n_episode"           : 50000,  # Number of training episodes
     "n_eval"              : 100,    # Number of evaluation episodes every eval_freq training episodes
     "eval_freq"           : 1000,
     "train_freq"          : 1,      # Train models every train_freq training episodes
-    "discount"            : 0.95,    # Discount in all Q learning algorithms
-    "exploration"         : 0.0,    # Initial exploration rate
-    "exploration_decay"   : 1e-5,   # Decrease of exploration rate for every action
-    "exploration_min"     : 0.0,
-    "learning_rate_mode"  : "adaptive",
-    "learning_rate"       : 1,
-    "learning_rate_decay" : .9999,
+    "discount"            : 0.8,    # Discount in all Q learning algorithms
+    "exploration"         : 0.1,    # Initial exploration rate
+    "exploration_decay"   : 0,   # Decrease of exploration rate for every action
+    "exploration_min"     : 0.1,
+    "learning_rate_mode"  : "fixed",
+    "learning_rate"       : 1e-3,
+    "learning_rate_decay" : 1,
     "randomise_order"     : False,  # Randomise starting order of agents for every game
     "only_legal_actions"  : True,   # Have agents only take legal actions
     "debug"               : False,  # Print loss and evaluation information during training
@@ -54,7 +53,7 @@ def setup(self):
 
     filepath = "q_table.npz"
 
-    if not self.train and os.path.isfile(filepath):
+    if os.path.isfile(filepath):
         print("Loading model from saved state.")
         self.logger.info("Loading model from saved state.")
 

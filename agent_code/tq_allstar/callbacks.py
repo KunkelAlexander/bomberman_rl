@@ -9,45 +9,22 @@ from q_tabular_agent import TabularQAgent
 from q_helpers import get_legal_actions, ACTS, N_ACTIONS, N_STATES, state_to_features, describe_state
 
 config = {
-    "n_episode"           : 50000,  # Number of training episodes
     "n_eval"              : 100,    # Number of evaluation episodes every eval_freq training episodes
     "eval_freq"           : 1000,
     "train_freq"          : 1,      # Train models every train_freq training episodes
-    "discount"            : 0.95,    # Discount in all Q learning algorithms
-    "exploration"         : 0.0,    # Initial exploration rate
-    "exploration_decay"   : 1e-5,   # Decrease of exploration rate for every action
-    "exploration_min"     : 0.0,
-    "learning_rate_mode"  : "adaptive",
-    "learning_rate"       : 1,
-    "learning_rate_decay" : .9999,
+    "discount"            : 0.8,    # Discount in all Q learning algorithms
+    "exploration"         : 0.05,    # Initial exploration rate
+    "exploration_decay"   : 0,   # Decrease of exploration rate for every action
+    "exploration_min"     : 0.05,
+    "learning_rate_mode"  : "fixed",
+    "learning_rate"       : 1e-4,
+    "learning_rate_decay" : 1,
     "randomise_order"     : False,  # Randomise starting order of agents for every game
     "only_legal_actions"  : True,   # Have agents only take legal actions
     "debug"               : False,  # Print loss and evaluation information during training
     "initial_q"           : 0.0,      # Initial Q value for tabular Q learning
 }
 
-
-def load_snapshot(agent, out_dir, chunk_idx):
-    """Load saved snapshot from pickle files."""
-
-    # Dict pickle subfolder path
-    dicts_dir = os.path.join(out_dir, "dicts")
-
-    # Form the file paths for the specific chunk index
-    q_file_path = os.path.join(dicts_dir, f"q_chunk_{chunk_idx:04d}.pkl")
-    q_visits_file_path = os.path.join(dicts_dir, f"q_visits_chunk_{chunk_idx:04d}.pkl")
-
-    if os.path.isfile(q_file_path) and os.path.isfile(q_visits_file_path):
-        print("Loading model from pickled files.")
-
-        # Load the Q-table and Q-visits from pickle files
-        with open(q_file_path, "rb") as f_q:
-            agent.q = pickle.load(f_q)
-
-        with open(q_visits_file_path, "rb") as f_qv:
-            agent.q_visits = pickle.load(f_qv)
-    else:
-        print("Pickle files not found. Please check the paths.")
 
 
 def setup(self):
@@ -74,7 +51,6 @@ def setup(self):
 
 
 
-
     filepath = "q_table.npz"
 
     if os.path.isfile(filepath):
@@ -82,8 +58,12 @@ def setup(self):
         self.logger.info("Loading model from saved state.")
 
         data     = np.load(filepath, allow_pickle=True)
-        self.agent.q          = data["q"].item()
-        self.agent.q_visits   = data["q_visits"].item()   # if you need visits later
+        self.agent.q           = data["q"].item()
+        self.agent.q_visits    = data["q_visits"].item()
+        self.agent.q_td_error  = data["q_td_error"].item()
+        self.agent.q_update_mag  = data["q_update_mag"].item()
+
+
 
 
 def act(self, game_state: dict) -> str:
@@ -98,12 +78,13 @@ def act(self, game_state: dict) -> str:
 
     features = state_to_features(game_state)
 
-    #if not self.train:
-    #    features = state_to_features(game_state)
-    #    print(describe_state(features))
-    #    print(self.agent.q.get(features, "Not yet in Q-table"))
-    #    print(self.agent.q_visits.get(features, "Not yet in Q-visit-table"))
+    if not self.train:
+        print(" | ".join(
+            f"{a[:1]}: {self.agent.q[features][i]:.2f}" +
+            (f" ({self.agent.q_visits[features][i]:.1e}x)" if features in self.agent.q_visits else "")
+            for i, a in enumerate(ACTS)
+        ) if features in self.agent.q else "Not in table")
+
 
     return ACTS[self.agent.act(features, actions=get_legal_actions(game_state=game_state))]
-
 
