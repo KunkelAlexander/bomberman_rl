@@ -41,7 +41,10 @@ All **new agents** live under the `agent_code/` directory. A typical layout look
 
 > **Heads‑up:** paths below assume you run commands from the repo root.
 
----
+- `environment.py` was also updated to allow debugging the Q-table
+
+<img src="figures/3_debug_state.gif" width=100%>
+
 
 ## Agents
 
@@ -55,6 +58,8 @@ All **new agents** live under the `agent_code/` directory. A typical layout look
 Below are minimal, end‑to‑end scripts to **reproduce the results** shown in the blog post. Adjust paths if your run folders differ.
 
 ### Coingrabber
+
+<img src="figures/4_coin_grabber.gif" width=100%>
 
 1. **Generate and store raw game data** (game state dictionary at every time‑step):
 
@@ -91,6 +96,8 @@ python3 main.py play --agents tq_coingrabber --scenario coin-heaven
 
 ### Crate‑hero
 
+<img src="figures/5_crate_hero.gif" width=100%>
+
 1. **Generate and store raw game data**:
 
 ```bash
@@ -125,6 +132,8 @@ python3 main.py play --agents tq_cratehero --scenario loot-crate
 ---
 
 ### Allstar
+
+<img src="figures/6_allstar.gif" width=100%>
 
 1. **Generate and store raw game data** (three opponents: peaceful + two rule‑based):
 
