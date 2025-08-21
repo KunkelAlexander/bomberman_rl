@@ -108,8 +108,6 @@ def compute_blast_map(arena, bombs):
                 if arena[x, y] == -1:        # solid wall blocks blast and ray
                     break
                 M[x, y] = min(M[x, y], t)
-                if arena[x, y] == 1:         # crate stops blast further on
-                    break
     return M          # 0/1/2/3/4/… / 99
 
 
@@ -135,8 +133,8 @@ def can_survive_current_bombs(start_xy, arena, bombs, others, expl_map, blast_ma
     while Q:
         x, y, t = Q.popleft()
 
-        # blown up already?
-        if blast_map[x, y] <= t or expl_map[x, y] > 0 > t:
+        # blown up already (exploding now at t=0) or scheduled to explode by time t
+        if (t == 0 and expl_map[x, y] > 0) or (blast_map[x, y] <= t):
             continue
 
         # reached or passed horizon → survived!
@@ -219,15 +217,15 @@ def state_to_features(game_state: dict | None) -> int | None:
     obj_bits  = OBJ_BITS["NONE"]
     dir_bits  = DIR_BITS["UP"]
 
-    if enemy_dist != None:
-        obj_bits = OBJ_BITS["ENEMY"]
-        dir_bits = enemy_dir
-    elif coin_dist != None:
+    if coin_dist != None:
         obj_bits = OBJ_BITS["COIN"]
         dir_bits = coin_dir
     elif crate_dist != None:
         obj_bits = OBJ_BITS["CRATE"]
         dir_bits = crate_dir
+    elif enemy_dist != None:
+        obj_bits = OBJ_BITS["ENEMY"]
+        dir_bits = enemy_dir
     # else keep NONE / 00
 
     # ---------------------------------------------------------------- per‑direction info
@@ -325,10 +323,11 @@ def reward_from_events(events: List[str]) -> int:
         e.COIN_COLLECTED:  0.2,
         e.KILLED_OPPONENT: 1.0,
         e.CRATE_DESTROYED: 0.1,
-        e.KILLED_SELF:    -1.0,
+        e.KILLED_SELF:    -2.0,
         e.SURVIVED_ROUND:  1.0,
         e.GOT_KILLED:     -0.1,
         e.WAITED:         -0.02,
+        e.INVALID_ACTION: -0.02,
     }
     reward_sum = 0
     for event in events:

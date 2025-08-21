@@ -48,7 +48,7 @@ def parse_args():
                    help="Scenario to use during evaluation.")
     p.add_argument("--main-py", default="main.py",
                    help="Path to main.py script.")
-    p.add_argument("--eval-rounds", type=int, default=10,
+    p.add_argument("--eval-rounds", type=int, default=50,
                    help="Number of rounds for evaluation.")
 
     return p.parse_args()
