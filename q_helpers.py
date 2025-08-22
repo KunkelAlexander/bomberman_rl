@@ -217,6 +217,12 @@ def state_to_features(game_state: dict | None) -> int | None:
     obj_bits  = OBJ_BITS["NONE"]
     dir_bits  = DIR_BITS["UP"]
 
+    if crate_dist != None and crate_dist < 4:
+        obj_bits = OBJ_BITS["CRATE"]
+        dir_bits = crate_dir
+    if enemy_dist != None and enemy_dist < 4:
+        obj_bits = OBJ_BITS["ENEMY"]
+        dir_bits = enemy_dir
     if coin_dist != None:
         obj_bits = OBJ_BITS["COIN"]
         dir_bits = coin_dir
@@ -300,14 +306,14 @@ def describe_state(state_id: int) -> str:
         neigh_occ.append(OCCS[code])
 
     return (
-        f"State bits        : {state_id:018b}\n"
-        f"Nearest interest  : {obj_name} ({dir_name})\n"
-        f"May wait          : {wait_bit}\n"
-        f"May place bomb    : {bomb_bit}\n"
-        f"Neighbour Up      : {neigh_occ[0]}\n"
-        f"Neighbour Right   : {neigh_occ[1]}\n"
-        f"Neighbour Down    : {neigh_occ[2]}\n"
-        f"Neighbour Left    : {neigh_occ[3]}"
+        f"State : {state_id:018b}\n"
+        f"Goto  : {obj_name} ({dir_name})\n"
+        f"Wait  : {'OK' if wait_bit else 'DANGER'}\n"
+        f"Bomb  : {'OK' if bomb_bit else 'DANGER'}\n"
+        f"Up    : {neigh_occ[0]}\n"
+        f"Right : {neigh_occ[1]}\n"
+        f"Down  : {neigh_occ[2]}\n"
+        f"Left  : {neigh_occ[3]}"
     )
 
 
@@ -323,9 +329,10 @@ def reward_from_events(events: List[str]) -> int:
         e.COIN_COLLECTED:  0.2,
         e.KILLED_OPPONENT: 1.0,
         e.CRATE_DESTROYED: 0.1,
-        e.KILLED_SELF:    -2.0,
-        e.SURVIVED_ROUND:  1.0,
-        e.GOT_KILLED:     -0.1,
+        e.KILLED_SELF:    -0.5,
+        e.OPPONENT_ELIMINATED: 0.2,
+        e.BOMB_DROPPED:    0.02,
+        e.GOT_KILLED:     -2.0,
         e.WAITED:         -0.02,
         e.INVALID_ACTION: -0.02,
     }
