@@ -650,31 +650,31 @@ class GUI:
         # Turn screenshots into videos
         assert self.world.args.make_video is not False
 
-        if self.world.args.make_video is True:
-            files = [self.screenshot_dir / f'{self.world.round_id}_video.mp4',
-                     self.screenshot_dir / f'{self.world.round_id}_video.webm']
-        else:
-            files = [Path(self.world.args.make_video)]
-
-        self.world.logger.debug(f'Turning screenshots into video')
-
-        PARAMS = {
-            ".mp4": ['-preset', 'veryslow', '-tune', 'animation', '-crf', '5', '-c:v', 'libx264',
-                     '-pix_fmt', 'yuv420p'],
-            ".webm": ['-threads', '2', '-tile-columns', '2', '-frame-parallel', '0', '-g', '100', '-speed', '1', '-pix_fmt', 'yuv420p', '-qmin', '0', '-qmax', '10', '-crf', '5', '-b:v', '2M', '-c:v', 'libvpx-vp9', ]
-        }
-
-        for video_file in files:
-            subprocess.call([
-                'ffmpeg', '-y', '-framerate', f'{self.world.args.fps}',
-                '-f', 'image2', '-pattern_type', 'glob',
-                '-i', self.screenshot_dir / f'{self.world.round_id}_*.png',
-                *PARAMS[video_file.suffix],
-                video_file
-            ])
-        self.world.logger.info("Done writing videos.")
-        for f in self.screenshot_dir.glob(f'{self.world.round_id}_*.png'):
-            f.unlink()
+        #if self.world.args.make_video is True:
+        #    files = [self.screenshot_dir / f'{self.world.round_id}_video.mp4',
+        #             self.screenshot_dir / f'{self.world.round_id}_video.webm']
+        #else:
+        #    files = [Path(self.world.args.make_video)]
+#
+        #self.world.logger.debug(f'Turning screenshots into video')
+#
+        #PARAMS = {
+        #    ".mp4": ['-preset', 'veryslow', '-tune', 'animation', '-crf', '5', '-c:v', 'libx264',
+        #             '-pix_fmt', 'yuv420p'],
+        #    ".webm": ['-threads', '2', '-tile-columns', '2', '-frame-parallel', '0', '-g', '100', '-speed', '1', '-pix_fmt', 'yuv420p', '-qmin', '0', '-qmax', '10', '-crf', '5', '-b:v', '2M', '-c:v', 'libvpx-vp9', ]
+        #}
+#
+        #for video_file in files:
+        #    subprocess.call([
+        #        'ffmpeg', '-y', '-framerate', f'{self.world.args.fps}',
+        #        '-f', 'image2', '-pattern_type', 'glob',
+        #        '-i', self.screenshot_dir / f'{self.world.round_id}_*.png',
+        #        *PARAMS[video_file.suffix],
+        #        video_file
+        #    ])
+        #self.world.logger.info("Done writing videos.")
+        #for f in self.screenshot_dir.glob(f'{self.world.round_id}_*.png'):
+        #    f.unlink()
 
     def render_debug_info(self, debug_text, x_base=600, y_base=400, line_height=14):
         # Render the heading
