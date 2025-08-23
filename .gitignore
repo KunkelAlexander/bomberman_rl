@@ -114,7 +114,6 @@ results/
 
 *.npz
 *.png
-*.gif
 *.gz
 *.pickle
 *.pkl
@@ -126,3 +125,6 @@ agent_code/tq_demonstrator/runs/coin_heaven_50k/transitions.pkl
 agent_code/tq_demonstrator/runs/three_rule_based_peaceful_200k/transitions.pkl
 agent_code/tq_demonstrator/runs/loot_crate_50k/transitions.pkl
 agent_code/tq_demonstrator/runs/coin_heaven_50k/transitions.pkl
+agent_code/tq_allstar_250k/__init__.py
+agent_code/tq_allstar_250k/callbacks.py
+agent_code/tq_allstar_250k/train.py
