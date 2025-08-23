@@ -59,7 +59,7 @@ Below are minimal, end‑to‑end scripts to **reproduce the results** shown in 
 
 ### Coingrabber
 
-<img src="figures/4_coin_grabber.gif" width=100%>
+<img src="figures/5_coin_grabber.gif" width=100%>
 
 1. **Generate and store raw game data** (game state dictionary at every time‑step):
 
@@ -96,7 +96,7 @@ python3 main.py play --agents tq_coingrabber --scenario coin-heaven
 
 ### Crate‑hero
 
-<img src="figures/5_crate_hero.gif" width=100%>
+<img src="figures/6_crate_hero.gif" width=100%>
 
 1. **Generate and store raw game data**:
 
@@ -133,7 +133,7 @@ python3 main.py play --agents tq_cratehero --scenario loot-crate
 
 ### Allstar
 
-<img src="figures/6_allstar.gif" width=100%>
+<img src="figures/7_allstar.gif" width=100%>
 
 1. **Generate and store raw game data** (three opponents: peaceful + two rule‑based):
 
@@ -156,19 +156,6 @@ python3 q_pretrain_tabular.py \
   --transitions-file agent_code/tq_demonstrator/runs/three_rule_based_peaceful_50k/transitions.pkl \
   -o agent_code/tq_allstar/q_table.npz \
   --training-episodes 5000 --num-chunks 10 \
-  --evaluate --agents tq_allstar peaceful_agent rule_based_agent rule_based_agent
-```
-
-Or mix several datasets (increase `--num-chunks` accordingly):
-
-```bash
-python3 q_pretrain_tabular.py \
-  --transitions-file \
-    agent_code/tq_demonstrator/runs/coin_heaven_50k/transitions.pkl \
-    agent_code/tq_demonstrator/runs/loot_crate_50k/transitions.pkl \
-    agent_code/tq_demonstrator/runs/three_rule_based_peaceful_50k/transitions.pkl \
-  -o agent_code/tq_allstar/q_table.npz \
-  --training-episodes 5000 --num-chunks 30 \
   --evaluate --agents tq_allstar peaceful_agent rule_based_agent rule_based_agent
 ```
 

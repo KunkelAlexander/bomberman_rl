@@ -139,6 +139,7 @@ def main(argv = None):
         # Video?
         sub.add_argument("--make-video", const=True, default=False, action='store', nargs='?',
                          help="Make a video from the game")
+        sub.add_argument("--fps", type=int, default=30, help="FPS for video")
 
     args = parser.parse_args(argv)
     if args.command_name == "replay":
