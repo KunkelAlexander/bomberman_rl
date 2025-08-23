@@ -133,7 +133,7 @@ python3 main.py play --agents tq_cratehero --scenario loot-crate
 
 ### Allstar
 
-<img src="figures/7_allstar.gif" width=100%>
+<img src="figures/7_allstar.gif" width=60% class="center">
 
 1. **Generate and store raw game data** (three opponents: peaceful + two rule‑based):
 
