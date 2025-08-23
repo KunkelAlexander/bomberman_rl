@@ -1,7 +1,7 @@
 # Q‑Learning with **BombeRLe**
 
 This repository implements both **tabular Q‑learning** and a **Deep Q‑Network (DQN)** for the classic game *Bomberman* using the BombeRLe environment.
-<img src="figures/1_gameplay.gif" width=100%>
+<img src="figures/1_gameplay.gif" width=60%>
 
 ## Table of contents
 
@@ -43,7 +43,7 @@ All **new agents** live under the `agent_code/` directory. A typical layout look
 
 - `environment.py` was also updated to allow debugging the Q-table
 
-<img src="figures/3_debug_state.gif" width=100%>
+<img src="figures/3_debug_state.gif" width=60%>
 
 
 ## Agents
@@ -59,7 +59,7 @@ Below are minimal, end‑to‑end scripts to **reproduce the results** shown in 
 
 ### Coingrabber
 
-<img src="figures/5_coin_grabber.gif" width=100%>
+<img src="figures/5_coin_grabber.gif" width=60%>
 
 1. **Generate and store raw game data** (game state dictionary at every time‑step):
 
@@ -96,7 +96,7 @@ python3 main.py play --agents tq_coingrabber --scenario coin-heaven
 
 ### Crate‑hero
 
-<img src="figures/6_crate_hero.gif" width=100%>
+<img src="figures/6_crate_hero.gif" width=60%>
 
 1. **Generate and store raw game data**:
 
