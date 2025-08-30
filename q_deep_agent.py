@@ -11,7 +11,8 @@ from tensorflow.keras import layers, models
 
 from q_agent_parent import Agent
 from q_prioritised_experience_replay import PrioritizedReplayBuffer
-from q_helpers import TransitionFields
+from q_helpers import TransitionFields, state_to_features
+from settings import BOMB_TIMER, EXPLOSION_TIMER
 
 # Define a directory to save checkpoints and logs
 checkpoint_dir = 'checkpoints'
@@ -56,19 +57,18 @@ class PrioritizedReplaySampler(ReplaySampler):
     def add(self, buffer, transition):
         buffer.add(transition)
 
+
+
+
 class DeepQAgent(Agent):
     # encoding of feature vector
-    ENCODING_BINARY   = 0 # convert tictactoe board that can be considered as 9-digit base 3-number to base 2-number
-    ENCODING_TUTORIAL = 1 # use one-hot encoding and convert board to three boolean arrays of size 9 respectively indicating empty fields, crosses and naughts
-    ENCODING_SYMMETRY = 2 # encode the board modulo its symmetries
+    ENCODING_BINARY   = 0 # convert 18-bit simplified state representation to base 2-number and pass to NN as vector
+    ENCODING_CNN      = 1 # one-hot encoding for CNN
     INPUT_ENCODINGS = {
         "encoding_binary": ENCODING_BINARY,
-        "encoding_tutorial": ENCODING_TUTORIAL,
-        "encoding_symmetry": ENCODING_SYMMETRY
+        "encoding_cnn": ENCODING_CNN
     }
     LARGE_NEGATIVE_NUMBER = -1e6
-
-    TERMINAL_STATE_ID = -1
 
     def __init__(self, agent_id, n_actions, n_states, config):
         """
@@ -96,9 +96,6 @@ class DeepQAgent(Agent):
         self.n_states            = n_states
 
         self.name                = f"deep-q agent {agent_id}"
-        self.board_size          = config["board_size"]
-        self.n_episode           = config["n_episode"]
-        self.n_eval              = config["n_eval"]
         self.eval_freq           = config["eval_freq"]
         self.grad_steps          = config["grad_steps"]
         self.discount            = config["discount"]
@@ -115,7 +112,7 @@ class DeepQAgent(Agent):
         self.target_update_tau   = config["target_update_tau"]
         self.debug               = config["debug"]
 
-        self.q_visits            = np.zeros((n_states, n_actions))
+        self.q_visits            = {}
 
         self.training_round      = 0
         self.training_data       = []
@@ -134,11 +131,11 @@ class DeepQAgent(Agent):
         else:
             self.replay_buffer  = PrioritizedReplayBuffer(
                 capacity=self.replay_buffer_size,
-                alpha=config.get("prb_alpha", 0.6),
-                beta0=config.get("prb_beta0", 0.4),
+                alpha      = config.get("prb_alpha", 0.6),
+                beta0      = config.get("prb_beta0", 0.4),
                 # anneal beta to 1 over the course of the training, in practive, we reach 1 a little sooner than at the end because of buffer filling up in the beginning
-                beta_steps=config.get("prb_beta_steps", self.n_episode),
-                epsilon=config.get("prb_epsilon", 1e-6),
+                beta_steps = config.get("prb_beta_steps", self.n_episode),
+                epsilon    = config.get("prb_epsilon", 1e-6),
             )
 
             self.replay_sampler = PrioritizedReplaySampler()
@@ -148,29 +145,17 @@ class DeepQAgent(Agent):
 
         # choose encoding of feature vector
         self.board_encoding      = self.INPUT_ENCODINGS[config["board_encoding"]]
-        self.input_shape         = (self.state_to_input(1).shape[1],)
+        if self.board_encoding == self.ENCODING_BINARY:
+            self.input_shape     = 18
+        elif self.board_encoding == self.ENCODING_CNN:
+            self.input_shape     = (9, 9, 10)
+        else:
+            raise ValueError("Unknown board encoding")
+
 
         # Models need to be defined and compiled in derived classes
         self.online_model        = None
         self.target_model        = None
-
-
-    def get_q(self):
-        """
-        Return the approximated Q-table as a NumPy array of shape (n_states, n_actions),
-        by querying the target model for all states in the environment.
-
-        :return: A NumPy array representing Q-values for all states.
-        """
-        q_values = np.zeros((self.n_states, self.n_actions), dtype=np.float32)
-
-        for state in range(self.n_states):
-            s_tensor = self.state_to_input(state)         # shape: (1, input_dim)
-            q_pred = self.target_model(s_tensor, training=False)  # shape: (1, n_actions)
-            q_values[state] = q_pred.numpy().squeeze()
-
-        return q_values
-
 
 
     def update(self, iteration, state, legal_actions, action, reward, done):
@@ -186,7 +171,7 @@ class DeepQAgent(Agent):
         """
         super().update(iteration, state, legal_actions, action, reward, done)
         if self.is_training:
-            self.training_data.append([iteration, state, legal_actions, action, reward, done])
+            self.training_data.append([iteration, self.state_to_input(state), legal_actions, action, reward, done])
 
 
     def final_update(self, reward):
@@ -198,8 +183,8 @@ class DeepQAgent(Agent):
         super().final_update(reward)
 
         if self.is_training:
-            self.training_data[-1][self.DONE]    = True
-            self.training_data[-1][self.REWARD] += reward
+            self.training_data[-1][TransitionFields.DONE]    = True
+            self.training_data[-1][TransitionFields.REWARD] += reward
 
             self.validate_training_data()
             self.move_training_data_to_replay_buffer()
@@ -207,47 +192,152 @@ class DeepQAgent(Agent):
             # Decrease exploration rate
             self.exploration = np.max([self.exploration * (1-self.exploration_decay), self.exploration_min])
 
-    def encode_tutorial(self, state: int) -> np.ndarray:
-        """One-hot encode in tutorial mode (3×9 vector)."""
-        base_arr = decimal_to_base(state, base=3, padding=9)
-        rep = np.zeros(3 * 9, dtype=int)
-        for i, v in enumerate(base_arr):
-            rep[i + v * 9] = 1
-        return rep
 
-    def encode_binary(self, state: int) -> np.ndarray:
-        """Binary encode the state id into a 15-bit vector."""
-        return decimal_to_base(state, base=2, padding=15)
+    def encode_binary(self, game_state: dict) -> np.ndarray:
+        """Convert a decimal number to a base-N vector of fixed length."""
+        n = state_to_features(game_state)
+        base    = 2
+        padding = 18 # 18 bit for state representation
+        digits = []
+
+        # Convert to base
+        while n > 0:
+            digits.append(n % base)
+            n //= base
+
+        # Pad with zeros and reverse
+        while len(digits) < padding:
+            digits.append(0)
+        digits.reverse()
+
+        return np.array(digits, dtype=np.float32)
 
 
-    def state_to_input(self, state):
+
+    def encode_cnn_onehot(self, game_state: dict) -> np.ndarray:
+        """
+        Convert the game state into a multi-channel one-hot feature grid for CNN input.
+
+        Channels (so far):
+        - wall, free, crate (one-hot split of 'field')
+        - bomb_timer (scaled 0..1)
+        - explosion_map (scaled 0..1)
+        - coin_map
+        - self_pos
+        - opp_pos
+        - can_bomb (self)
+        - opp_can_bomb (per-tile binary where opponent can bomb)
+        """
+        if game_state is None:
+            return None
+
+        field = game_state['field']
+
+        wall_map = (field == -1).astype(np.float32)
+        free_map = (field == 0).astype(np.float32)
+        crate_map = (field == 1).astype(np.float32)
+
+        # Bomb map: normalize timers
+        bomb_map = np.zeros_like(field, dtype=np.float32)
+        for (x, y), t in game_state['bombs']:
+            bomb_map[x, y] = t / BOMB_TIMER
+
+        # Explosion map: normalize to [0,1]
+        explosion_map = np.clip(game_state['explosion_map'], 0, EXPLOSION_TIMER).astype(np.float32)
+        explosion_map /= EXPLOSION_TIMER
+
+        # Coins
+        coin_map = np.zeros_like(field, dtype=np.float32)
+        for (x, y) in game_state['coins']:
+            coin_map[x, y] = 1.0
+
+        # Self
+        self_pos_channel = np.zeros_like(field, dtype=np.float32)
+        sx, sy = game_state['self'][3]
+        self_pos_channel[sx, sy] = 1.0
+
+        # Opponents
+        opp_pos_channel = np.zeros_like(field, dtype=np.float32)
+        opp_can_bomb_channel = np.zeros_like(field, dtype=np.float32)
+        for opp in game_state['others']:
+            ox, oy = opp[3]
+            opp_pos_channel[ox, oy] = 1.0
+            opp_can_bomb_channel[ox, oy] = float(opp[2])
+
+        # Self bomb ability
+        can_bomb_channel = np.ones_like(field, dtype=np.float32) * int(game_state['self'][2])
+
+        # Stack all channels
+        multi_channel_grid = np.stack((
+            wall_map, free_map, crate_map,
+            bomb_map, explosion_map,
+            coin_map, self_pos_channel, opp_pos_channel,
+            can_bomb_channel, opp_can_bomb_channel
+        ), axis=-1)
+
+        return multi_channel_grid
+
+    def debug_cnn_encoding(self, tensor: np.ndarray, channel_names: list[str] | None = None, max_channels: int = 20):
+        """
+        Pretty-print the CNN input tensor channel by channel.
+
+        Args:
+            tensor: np.ndarray of shape (rows, cols, channels)
+            channel_names: optional list of names for each channel
+            max_channels: limit to print to avoid huge dumps
+        """
+        rows, cols, C = tensor.shape
+        print(f"[DEBUG] CNN encoding: shape = ({rows}, {cols}, {C})")
+
+        if channel_names is None:
+            channel_names = [f"ch{c}" for c in range(C)]
+
+        for c in range(min(C, max_channels)):
+            print(f"\n--- Channel {c} : {channel_names[c]} ---")
+            print(tensor[:, :, c])
+            # Give a little interpretation if channel is binary
+            unique_vals = np.unique(tensor[:, :, c])
+            if np.all(np.isin(unique_vals, [0,1])):
+                print("   (binary map: 1 = presence, 0 = absence)")
+            elif np.all(unique_vals == 0):
+                print("   (all zero channel)")
+            else:
+                print(f"   values in [{tensor[:,:,c].min()}, {tensor[:,:,c].max()}]")
+
+        if C > max_channels:
+            print(f"... skipped {C - max_channels} channels ...")
+
+
+    def state_to_input(self, game_state: dict):
         """
         Convert the state into an input representation suitable for the neural network.
 
         :param state: The current state.
         :return:      The input representation of the state.
         """
-
-        # Check cache
-        if state in self._input_cache:
-            return self._input_cache[state]
-
-        if state == self.TERMINAL_STATE_ID:
-           representation = np.zeros(self.input_shape, dtype=np.float32)
-        elif self.board_encoding == self.ENCODING_TUTORIAL:
-            representation = self.encode_tutorial(state)
+        if game_state is None:
+            representation = np.zeros(self.input_shape, dtype=np.float32)
         elif self.board_encoding == self.ENCODING_BINARY:
-            representation = self.encode_binary(state)
+            representation = self.encode_binary(game_state)
+        elif self.board_encoding == self.ENCODING_CNN:
+            representation = self.encode_cnn_onehot(game_state)
+
+
+            #channel_names = [
+            #    "wall_map", "free_map", "crate_map",
+            #    "bomb_timer", "explosion_map",
+            #    "coin_map", "self_pos", "opp_pos",
+            #    "can_bomb", "opp_can_bomb"
+            #]
+#
+            #self.debug_cnn_encoding(representation, channel_names)
+
+
         else:
             raise ValueError("Unsupported input mode")
 
-        # force the dtype here
-        tensor = tf.convert_to_tensor(
-            representation.reshape(1, -1),
-            dtype=tf.float32
-        )
 
-        self._input_cache[state] = tensor
+        tensor = tf.convert_to_tensor(representation[np.newaxis, :], dtype=tf.float32)
         return tensor
 
     def validate_training_data(self):
@@ -255,13 +345,13 @@ class DeepQAgent(Agent):
         Validate the integrity of training data, checking for missing iterations and incomplete episodes.
         """
         # Check integrity of training data
-        if self.training_data[-1][self.DONE] is not True:
+        if self.training_data[-1][TransitionFields.DONE] is not True:
             raise ValueError("Last training datum not done")
 
         # Validate iteration number
         for i in range(len(self.training_data) - 1):
-            i1 = self.training_data[i  ][self.ITERATION]
-            i2 = self.training_data[i+1][self.ITERATION]
+            i1 = self.training_data[i  ][TransitionFields.ITERATION]
+            i2 = self.training_data[i+1][TransitionFields.ITERATION]
             if (i1 + 1 != i2):
                 raise ValueError(f"Missing iteration between iterations {i1} and {i2} in training data")
 
@@ -269,18 +359,18 @@ class DeepQAgent(Agent):
 
     def move_training_data_to_replay_buffer(self):
         """
-        Move training data to the replay buffer, connecting states with their subsequent states.
+        Move training data to the replay buffer, connecting states with their subsequent states and converting game dicts to states
         """
-
         # Connect state with next state and move to replay buffer
         for i in range(len(self.training_data)):
             iteration, state, legal_actions, action, reward, done = self.training_data[i]
             if not done:
-                next_state          = self.training_data[i+1][self.STATE]
-                next_legal_actions  = self.training_data[i+1][self.LEGAL_ACTIONS]
+                next_state          = self.training_data[i+1][TransitionFields.STATE]
+                next_legal_actions  = self.training_data[i+1][TransitionFields.LEGAL_ACTIONS]
             else:
-                next_state          = self.TERMINAL_STATE_ID
-                next_legal_actions  = [] # no legal moves after terminal
+                next_state          = self.state_to_input(None)
+                next_legal_actions  = None
+
             self.replay_sampler.add(self.replay_buffer, [state, legal_actions, action, next_state, next_legal_actions, reward, done])
 
         self.training_data = []
@@ -312,12 +402,8 @@ class DeepQAgent(Agent):
             rewards       [i]          = r
             not_terminal  [i]          = 1 - d
 
-            # encode to whatever shape your agent needs
-            s      = self.state_to_input(s)   # tf.Tensor shape [1, …]
-            s_next = self.state_to_input(s_)  # tf.Tensor shape [1, …]
-
             state_tensors.append(s)
-            next_state_tensors.append(s_next)
+            next_state_tensors.append(s_)
 
         # 3) Concatenate into batch tensors [B, …]
         states      = tf.concat(state_tensors,      axis=0)  # [B, shape...]
@@ -334,14 +420,7 @@ class DeepQAgent(Agent):
             tf.convert_to_tensor(not_terminal)
         )
 
-    # 1) A graph fn that takes (state_tensor, legal_action_indices) → action_index
-    # Without this , TensorFlow goes through its Python‐level traceback filtering machinery on every call to figure out which frames to show you if an exception happens.
-    @tf.function(
-      input_signature=[
-        tf.TensorSpec(shape=[1, None], dtype=tf.float32),
-        tf.TensorSpec(shape=[None],   dtype=tf.int32),
-      ]
-    )
+    @tf.function
     def _graph_act(self, s, legal_idxs):
         # get q-values
         q = self.online_model(s, training=False)             # shape [1, n_actions]
@@ -359,7 +438,7 @@ class DeepQAgent(Agent):
         return tf.argmax(masked_q, axis=1)[0]                # a scalar tf.Tensor[int32]
 
 
-    def act(self, state, actions):
+    def act(self, game_state : dict, actions):
         """
         Select an action using an epsilon-greedy policy.
 
@@ -373,7 +452,7 @@ class DeepQAgent(Agent):
             action = np.random.choice(actions)
         # exploit
         else:
-            s = self.state_to_input(state)
+            s = self.state_to_input(game_state)
             # one synchronous graph call, no py-side masking or .numpy() inside TF internals:
             action = int(self._graph_act(s, tf.constant(actions, tf.int32)))
 
@@ -420,10 +499,6 @@ class DeepQAgent(Agent):
             minibatch, idxs, weights = self.replay_sampler.sample(
                 self.replay_buffer, self.batch_size
             )
-
-            # bookkeeping (optional – still NumPy friendly)
-            for (s, _, a, _, _, _, _) in minibatch:
-                self.q_visits[s][a] += 1
 
             # unpack as **tensors** (dtype=float32 unless noted)
             (states, legal_s, actions, next_states,
@@ -483,46 +558,43 @@ class DeepQAgent(Agent):
         self.training_round+= 1
 
 
-class ConvolutionalDeepQAgent(DeepQAgent):
+    def save(self, out_dir, base_name="dqn_agent", compressed=True):
+        os.makedirs(out_dir, exist_ok=True)
+        model_dir = os.path.join(out_dir, "models")
+        os.makedirs(model_dir, exist_ok=True)
 
-    def __init__(self, agent_id, n_actions, n_states, config):
-        """
-        A Q-learning agent with a convolutional network for Q-value approximation.
+        # Save metadata
+        payload = {
+            "meta": np.array({
+                "learning_rate": self.learning_rate,
+                "discount": self.discount,
+            }, dtype=object),
+            "q_visits": np.array(self.q_visits, dtype=object),  # save q_visits dict
+        }
 
-        :param agent_id:            The ID of the agent.
-        :param n_actions:           The number of available actions.
-        :param n_states:            The number of states in the environment.
-        :param config:              A dictionary containing configuration parameters.
-        """
-        super().__init__(agent_id, n_actions, n_states, config)
+        npz_path = os.path.join(out_dir, f"{base_name}.npz")
+        if compressed:
+            np.savez_compressed(npz_path, **payload)
+        else:
+            np.savez(npz_path, **payload)
 
-        if self.board_encoding != self.ENCODING_TUTORIAL:
-            raise ValueError("Only input in ENCODING_TUTORIAL (one-hot) supported in convolutional network")
+        # Save models
+        self.online_model.save(os.path.join(model_dir, f"{base_name}_online_model.keras"))
+        self.target_model.save(os.path.join(model_dir, f"{base_name}_target_model.keras"))
+        print(f"[SAVE] Agent state saved in {out_dir}")
 
-        self.input_shape = (3, 3, 3)
+    def load(self, in_dir, base_name="dqn_agent"):
+        model_dir = os.path.join(in_dir, "models")
 
-    def state_to_input(self, state):
-        # Convert to NHWC (batch size, height, width, number of channels)
-        input = super().state_to_input(state)
-        input = tf.reshape(input, (1,3,3,3))
-        input = tf.transpose(input, [0,2,3,1])
-        return input
+        # Load metadata
+        npz_path = os.path.join(in_dir, f"{base_name}.npz")
+        metadata = np.load(npz_path, allow_pickle=True)["meta"].item()
+        self.learning_rate = metadata["learning_rate"]
+        self.discount = metadata["discount"]
 
-    @tf.function(
-        input_signature=[
-            tf.TensorSpec([1, 3, 3, 3], tf.float32),  # NHWC conv input
-            tf.TensorSpec([None],       tf.int32),    # legal action indices
-        ]
-    )
-    def _graph_act(self, state, legal_idxs):
-        # you can either re-implement the body, or call a shared helper
-        q       = self.online_model(state, training=False)
-        neg_inf = tf.constant(self.LARGE_NEGATIVE_NUMBER, tf.float32)
-        mask = tf.scatter_nd(
-          tf.expand_dims(legal_idxs, 1),
-          tf.ones_like(legal_idxs, dtype=tf.float32),
-          [self.n_actions]
-        )
-        mask = tf.reshape(mask, [1, -1])
-        masked_q = mask * q + (1 - mask) * neg_inf
-        return tf.argmax(masked_q, axis=1)[0]
+        # Load models
+        online_model_path = os.path.join(model_dir, f"{base_name}_online_model.keras")
+        target_model_path = os.path.join(model_dir, f"{base_name}_target_model.keras")
+        self.online_model = tf.keras.models.load_model(online_model_path)
+        self.target_model = tf.keras.models.load_model(target_model_path)
+        print(f"[LOAD] Agent state loaded from {in_dir}")

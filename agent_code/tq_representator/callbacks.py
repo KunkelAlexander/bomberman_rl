@@ -80,7 +80,6 @@ def act(self, game_state: dict) -> str:
     # legal actions derived from state bits
     legal = extract_legal_actions(features)
 
-    print(legal)
     # decode high-level info
     obj_bits   = (features >> 14) & 0b11
     dir_bits   = (features >> 12) & 0b11
