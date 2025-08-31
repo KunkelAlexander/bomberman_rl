@@ -80,8 +80,6 @@ class DeepQAgent(Agent):
         :param config:              A dictionary containing agent configuration parameters.
                                     - 'board_size': The size of the game board.
                                     - 'n_episode': The total number of episodes for training.
-                                    - 'n_eval': The frequency of evaluation episodes.
-                                    - 'eval_freq': The evaluation frequency in episodes.
                                     - 'discount': The discount factor (gamma).
                                     - 'learning_rate': The learning rate (alpha).
                                     - 'learning_rate_decay': The learning rate decay factor.
@@ -97,7 +95,6 @@ class DeepQAgent(Agent):
 
         self.name                = f"deep-q agent {agent_id}"
         self.n_episode           = config["n_episode"]
-        self.eval_freq           = config["eval_freq"]
         self.grad_steps          = config["grad_steps"]
         self.discount            = config["discount"]
         self.learning_rate       = config["learning_rate"]
@@ -112,8 +109,6 @@ class DeepQAgent(Agent):
         self.target_update_freq  = config["target_update_freq"]
         self.target_update_tau   = config["target_update_tau"]
         self.debug               = config["debug"]
-
-        self.q_visits            = {}
 
         self.training_round      = 0
         self.training_data       = []
@@ -472,7 +467,6 @@ class DeepQAgent(Agent):
                 "learning_rate": self.learning_rate,
                 "discount": self.discount,
             }, dtype=object),
-            "q_visits": np.array(self.q_visits, dtype=object),  # save q_visits dict
         }
 
         npz_path = os.path.join(out_dir, f"{base_name}.npz")

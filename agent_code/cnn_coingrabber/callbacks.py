@@ -87,10 +87,9 @@ def setup(self):
             config=base_config,
     )
 
-    net = build_cnn_dqn_model(self.agent.input_shape, self.agent.n_actions)
-    net.compile(optimizer=tf.keras.optimizers.Adam(base_config["learning_rate"]), loss="mse")
-    self.agent.online_model = net
-    self.agent.target_model = net
+    self.agent.online_model = build_cnn_dqn_model(self.agent.input_shape, self.agent.n_actions)
+    self.agent.online_model.compile(optimizer=tf.keras.optimizers.Adam(base_config["learning_rate"]), loss="mse")
+    self.agent.target_model = build_cnn_dqn_model(self.agent.input_shape, self.agent.n_actions)
 
     if not self.train:
         # Load everything back
