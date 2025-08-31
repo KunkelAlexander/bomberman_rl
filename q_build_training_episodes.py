@@ -5,7 +5,7 @@ from tqdm import tqdm
 import os
 
 # adjust if your project structure differs:
-from q_helpers import state_to_features, reward_from_events, ACTS, ACT_BITS, TransitionFields, get_legal_actions
+from q_helpers import state_to_tabular_features, reward_from_events, ACTS, ACT_BITS, TransitionFields, get_legal_actions
 
 PICKLE_PROTOCOL = 2  # protocol 2 keeps things simple (no frames)
 
@@ -56,7 +56,7 @@ def build_and_stream(folder: str, out_path: str) -> int:
             # Build one episode entirely in memory (bounded)
             episode = []
             for idx, step in enumerate(transitions):
-                state         = state_to_features(step['state'])
+                state         = state_to_tabular_features(step['state'])
                 legal_actions = get_legal_actions(step['state'])
                 action        = ACT_BITS[step['action']]
                 if action is None:

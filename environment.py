@@ -16,7 +16,7 @@ import settings as s
 from agents import Agent, SequentialAgentBackend
 from fallbacks import pygame
 from items import Coin, Explosion, Bomb
-from q_helpers import state_to_features, describe_state
+from q_helpers import state_to_tabular_features, describe_tabular_state
 
 WorldArgs = namedtuple("WorldArgs",
                        ["no_gui", "fps", "turn_based", "update_interval", "save_replay", "replay", "make_video", "continue_without_training", "log_dir", "save_stats", "match_name", "seed", "silence_errors", "scenario"])
@@ -615,10 +615,10 @@ class GUI:
                 self.world.user_input = None
                 agent_state = self.world.get_state_for_agent(a)
                 if agent_state is not None:
-                    features = state_to_features(agent_state)
+                    features = state_to_tabular_features(agent_state)
                     if features is not None:
                         self.debug_state_id = features
-                        debug_str = describe_state(self.debug_state_id)
+                        debug_str = describe_tabular_state(self.debug_state_id)
 
 
 

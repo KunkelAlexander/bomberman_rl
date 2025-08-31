@@ -10,7 +10,7 @@ from tensorflow.keras import layers, models
 
 from q_deep_agent import DeepQAgent, ConvolutionalDeepQAgent
 
-from q_helpers import get_legal_actions, ACTS, N_ACTIONS, N_STATES, state_to_features, describe_state
+from q_helpers import get_legal_actions, ACTS, N_ACTIONS, N_STATES, state_to_tabular_features, describe_tabular_state
 
 base_config = {
     "n_eval"              : 100,    # Number of evaluation episodes every eval_freq training episodes

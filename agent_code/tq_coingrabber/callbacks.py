@@ -6,7 +6,7 @@ import numpy as np
 
 from q_tabular_agent import TabularQAgent
 
-from q_helpers import get_legal_actions, ACTS, N_ACTIONS, N_STATES, state_to_features, describe_state
+from q_helpers import get_legal_actions, ACTS, N_ACTIONS, N_STATES, state_to_tabular_features, describe_tabular_state
 
 config = {
     "n_episode"           : 50000,  # Number of training episodes
@@ -72,7 +72,7 @@ def act(self, game_state: dict) -> str:
     :return: The action to take as a string.
     """
 
-    features = state_to_features(game_state)
+    features = state_to_tabular_features(game_state)
 
     if not self.train:
         print(" | ".join(

@@ -2,7 +2,7 @@ import pickle
 from typing import List
 
 import events as e
-from q_helpers import get_legal_actions, state_to_features, reward_from_events, ACTS, N_ACTIONS, N_STATES, ACT_BITS
+from q_helpers import get_legal_actions, state_to_tabular_features, reward_from_events, ACTS, N_ACTIONS, N_STATES, ACT_BITS
 import numpy as np
 
 def setup_training(self):
@@ -43,7 +43,7 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
 
     # state_to_features is defined in callbacks.py
     self.agent.update(iteration = self.iteration,
-                      state = state_to_features(old_game_state),
+                      state = state_to_tabular_features(old_game_state),
                       legal_actions = get_legal_actions(old_game_state),
                       action = ACT_BITS[self_action],
                       reward = reward,
@@ -68,7 +68,7 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     reward = reward_from_events(self, events)
 
     self.agent.update(iteration = self.iteration,
-                      state = state_to_features(last_game_state),
+                      state = state_to_tabular_features(last_game_state),
                       legal_actions = get_legal_actions(last_game_state),
                       action = ACT_BITS[last_action],
                       reward = reward,

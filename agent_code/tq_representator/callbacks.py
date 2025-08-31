@@ -6,7 +6,7 @@ import numpy as np
 
 from q_tabular_agent import TabularQAgent
 
-from q_helpers import get_legal_actions, ACTS, N_ACTIONS, N_STATES, state_to_features, describe_state, DIRS, OCCS, OBJ_BITS
+from q_helpers import get_legal_actions, ACTS, N_ACTIONS, N_STATES, state_to_tabular_features, describe_tabular_state, DIRS, OCCS, OBJ_BITS
 
 config = {
     "n_eval"              : 100,    # Number of evaluation episodes every eval_freq training episodes
@@ -75,7 +75,7 @@ def extract_legal_actions(features: int) -> list[str]:
     return legal
 
 def act(self, game_state: dict) -> str:
-    features = state_to_features(game_state)
+    features = state_to_tabular_features(game_state)
 
     # legal actions derived from state bits
     legal = extract_legal_actions(features)

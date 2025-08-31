@@ -7,7 +7,7 @@ from enum import IntEnum
 import os
 import sys
 
-from settings import BOMB_POWER, BOMB_TIMER
+from settings import BOMB_POWER, BOMB_TIMER, EXPLOSION_TIMER
 
 from typing import List
 import events as e
@@ -188,7 +188,7 @@ def is_safe_tile(nx: int, ny: int,
 # ---------------------------------------------------------------------------
 
 
-def state_to_features(game_state: dict | None) -> int | None:
+def state_to_tabular_features(game_state: dict | None) -> int | None:
     if game_state is None:
         return None
 
@@ -290,7 +290,7 @@ def state_to_features(game_state: dict | None) -> int | None:
 # helper: human‑readable description of a 18‑bit state id
 # ---------------------------------------------------------------------------
 
-def describe_state(state_id: int) -> str:
+def describe_tabular_state(state_id: int) -> str:
     wait_bit        = (state_id >> 17) & 0b1      # May safely wait
     bomb_bit        = (state_id >> 16) & 0b1      # May (safely) use bomb
     obj_bits        = (state_id >> 14) & 0b11     # 2 bits for ["NONE", "ENEMY", "CRATE", "COIN"]
@@ -315,6 +315,147 @@ def describe_state(state_id: int) -> str:
         f"Down  : {neigh_occ[2]}\n"
         f"Left  : {neigh_occ[3]}"
     )
+
+
+
+
+def compute_danger_and_explosion_map(arena, bombs, explosion):
+    """
+    Returns an int array M where:
+        M[x,y] = smallest timer of any bomb that will blast (x,y)
+                or 99 if no bomb reaches it.
+    """
+    rows, cols = arena.shape
+    INF = 99
+    danger   = np.full((rows, cols), INF, dtype=np.int8)
+
+    for (bx, by), t in bombs:
+        for dx, dy in [(0,0), (1,0), (-1,0), (0,1), (0,-1)]:
+            for k in range(0 if dx==dy==0 else 1, BOMB_POWER+1):
+                x, y = bx + dx*k, by + dy*k
+                if not (0 <= x < rows and 0 <= y < cols):
+                    break
+                if arena[x, y] == -1:        # solid wall blocks blast and ray
+                    break
+                danger[x, y] = min(danger[x, y], t)
+
+    explosion = explosion.copy()
+    # The explosion map does not cover bombs that are just exploding (t=0)
+    explosion[danger == 0] = EXPLOSION_TIMER
+
+    danger[danger == INF] = 0
+
+    return danger.astype(np.float32), explosion
+
+
+def state_to_cnn_features(game_state: dict) -> np.ndarray:
+    """
+    Convert the game state into a multi-channel one-hot feature grid for CNN input.
+
+    Channels (so far):
+    - wall, free, crate (one-hot split of 'field')
+    - bomb_timer (scaled 0..1)
+    - explosion_map (scaled 0..1)
+    - coin_map
+    - self_pos
+    - opp_pos
+    - can_bomb (self)
+    - opp_can_bomb (per-tile binary where opponent can bomb)
+    """
+    if game_state is None:
+        return None
+
+    field = game_state['field']
+
+    wall_map = (field == -1).astype(np.float32)
+    free_map = (field == 0).astype(np.float32)
+    crate_map = (field == 1).astype(np.float32)
+
+    # Bomb map: normalize timers
+    bomb_map = np.zeros_like(field, dtype=np.float32)
+    for (x, y), t in game_state['bombs']:
+        bomb_map[x, y] = t / BOMB_TIMER
+
+    danger_map, explosion_map = compute_danger_and_explosion_map(field, game_state['bombs'], game_state['explosion_map'])
+
+    # Danger map: normalize to [0,1]
+    danger_map    /= BOMB_TIMER
+
+    # Explosion map: normalize to [0,1]
+    explosion_map /= EXPLOSION_TIMER
+
+    # Coins
+    coin_map = np.zeros_like(field, dtype=np.float32)
+    for (x, y) in game_state['coins']:
+        coin_map[x, y] = 1.0
+
+    # Self
+    self_pos_channel = np.zeros_like(field, dtype=np.float32)
+    sx, sy = game_state['self'][3]
+    self_pos_channel[sx, sy] = 1.0
+
+    # Opponents
+    opp_pos_channel = np.zeros_like(field, dtype=np.float32)
+    opp_can_bomb_channel = np.zeros_like(field, dtype=np.float32)
+    for opp in game_state['others']:
+        ox, oy = opp[3]
+        opp_pos_channel[ox, oy] = 1.0
+        opp_can_bomb_channel[ox, oy] = float(opp[2])
+
+    # Self bomb ability
+    can_bomb_channel = np.ones_like(field, dtype=np.float32) * int(game_state['self'][2])
+
+    # Stack all channels
+    multi_channel_grid = np.stack((
+        wall_map, free_map, crate_map,
+        bomb_map, danger_map, explosion_map,
+        coin_map, self_pos_channel, opp_pos_channel,
+        can_bomb_channel, opp_can_bomb_channel
+    ), axis=-1)
+
+    return multi_channel_grid
+
+
+
+
+def describe_cnn_state(tensor: np.ndarray, max_channels: int = 20):
+    """
+    Pretty-print the CNN input tensor channel by channel.
+
+    Args:
+        tensor: np.ndarray of shape (rows, cols, channels)
+        channel_names: optional list of names for each channel
+        max_channels: limit to print to avoid huge dumps
+    """
+    rows, cols, C = tensor.shape
+    print(f"[DEBUG] CNN encoding: shape = ({rows}, {cols}, {C})")
+
+
+
+    channel_names = [
+        "wall_map", "free_map", #"crate_map",
+        "bomb_timer", "danger_map", "explosion_map",
+        "coin_map", "self_pos", #"opp_pos",
+        "can_bomb", #"opp_can_bomb"
+    ]
+
+    if channel_names is None:
+        channel_names = [f"ch{c}" for c in range(C)]
+
+    for c in range(min(C, max_channels)):
+        print(f"\n--- Channel {c} : {channel_names[c]} ---")
+        print(tensor[:, :, c])
+        # Give a little interpretation if channel is binary
+        unique_vals = np.unique(tensor[:, :, c])
+        if np.all(np.isin(unique_vals, [0,1])):
+            print("   (binary map: 1 = presence, 0 = absence)")
+        elif np.all(unique_vals == 0):
+            print("   (all zero channel)")
+        else:
+            print(f"   values in [{tensor[:,:,c].min()}, {tensor[:,:,c].max()}]")
+
+    if C > max_channels:
+        print(f"... skipped {C - max_channels} channels ...")
 
 
 def reward_from_events(events: List[str]) -> int:
