@@ -12,7 +12,7 @@ from tensorflow.keras import layers, models
 from q_agent_parent import Agent
 from q_prioritised_experience_replay import PrioritizedReplayBuffer
 from q_helpers import TransitionFields, state_to_features
-from settings import BOMB_TIMER, EXPLOSION_TIMER
+from settings import BOMB_TIMER, EXPLOSION_TIMER, BOMB_POWER
 
 # Define a directory to save checkpoints and logs
 checkpoint_dir = 'checkpoints'
@@ -96,6 +96,7 @@ class DeepQAgent(Agent):
         self.n_states            = n_states
 
         self.name                = f"deep-q agent {agent_id}"
+        self.n_episode           = config["n_episode"]
         self.eval_freq           = config["eval_freq"]
         self.grad_steps          = config["grad_steps"]
         self.discount            = config["discount"]
@@ -118,10 +119,10 @@ class DeepQAgent(Agent):
         self.training_data       = []
         self.training_log        = []
 
-        self.enable_double_dqn   = config.get("enable_double_dqn", False)
+        self.enable_double_dqn   = config.get("enable_double_dqn", True)
         if self.enable_double_dqn:
             print("Double DQN enabled!")
-        self.enable_prio_exp_rep = config.get("enable_prioritised_experience_replay", False)
+        self.enable_prio_exp_rep = config.get("enable_prioritised_experience_replay", True)
         if self.enable_prio_exp_rep:
             print("Prioritised Experience Replay enabled!")
 
@@ -148,7 +149,7 @@ class DeepQAgent(Agent):
         if self.board_encoding == self.ENCODING_BINARY:
             self.input_shape     = 18
         elif self.board_encoding == self.ENCODING_CNN:
-            self.input_shape     = (9, 9, 10)
+            self.input_shape     = (9, 9, 8)
         else:
             raise ValueError("Unknown board encoding")
 
@@ -214,6 +215,35 @@ class DeepQAgent(Agent):
 
 
 
+    def compute_danger_and_explosion_map(self, arena, bombs, explosion):
+        """
+        Returns an int array M where:
+            M[x,y] = smallest timer of any bomb that will blast (x,y)
+                    or 99 if no bomb reaches it.
+        """
+        rows, cols = arena.shape
+        INF = 99
+        danger   = np.full((rows, cols), INF, dtype=np.int8)
+
+        for (bx, by), t in bombs:
+            for dx, dy in [(0,0), (1,0), (-1,0), (0,1), (0,-1)]:
+                for k in range(0 if dx==dy==0 else 1, BOMB_POWER+1):
+                    x, y = bx + dx*k, by + dy*k
+                    if not (0 <= x < rows and 0 <= y < cols):
+                        break
+                    if arena[x, y] == -1:        # solid wall blocks blast and ray
+                        break
+                    danger[x, y] = min(danger[x, y], t)
+
+        explosion = explosion.copy()
+        # The explosion map does not cover bombs that are just exploding (t=0)
+        explosion[danger == 0] = EXPLOSION_TIMER
+
+        danger[danger == INF] = 0
+
+        return danger.astype(np.float32), explosion
+
+
     def encode_cnn_onehot(self, game_state: dict) -> np.ndarray:
         """
         Convert the game state into a multi-channel one-hot feature grid for CNN input.
@@ -242,8 +272,12 @@ class DeepQAgent(Agent):
         for (x, y), t in game_state['bombs']:
             bomb_map[x, y] = t / BOMB_TIMER
 
+        danger_map, explosion_map = self.compute_danger_and_explosion_map(field, game_state['bombs'], game_state['explosion_map'])
+
+        # Danger map: normalize to [0,1]
+        danger_map    /= BOMB_TIMER
+
         # Explosion map: normalize to [0,1]
-        explosion_map = np.clip(game_state['explosion_map'], 0, EXPLOSION_TIMER).astype(np.float32)
         explosion_map /= EXPLOSION_TIMER
 
         # Coins
@@ -269,10 +303,10 @@ class DeepQAgent(Agent):
 
         # Stack all channels
         multi_channel_grid = np.stack((
-            wall_map, free_map, crate_map,
-            bomb_map, explosion_map,
-            coin_map, self_pos_channel, opp_pos_channel,
-            can_bomb_channel, opp_can_bomb_channel
+            wall_map, free_map, #crate_map,
+            bomb_map, danger_map, explosion_map,
+            coin_map, self_pos_channel, #opp_pos_channel,
+            can_bomb_channel, #opp_can_bomb_channel
         ), axis=-1)
 
         return multi_channel_grid
@@ -324,12 +358,12 @@ class DeepQAgent(Agent):
 
 
             #channel_names = [
-            #    "wall_map", "free_map", "crate_map",
-            #    "bomb_timer", "explosion_map",
-            #    "coin_map", "self_pos", "opp_pos",
-            #    "can_bomb", "opp_can_bomb"
+            #    "wall_map", "free_map", #"crate_map",
+            #    "bomb_timer", "danger_map", "explosion_map",
+            #    "coin_map", "self_pos", #"opp_pos",
+            #    "can_bomb", #"opp_can_bomb"
             #]
-#
+##
             #self.debug_cnn_encoding(representation, channel_names)
 
 
@@ -420,7 +454,12 @@ class DeepQAgent(Agent):
             tf.convert_to_tensor(not_terminal)
         )
 
-    @tf.function
+    @tf.function(
+        input_signature=[
+            tf.TensorSpec(shape=[1, 9, 9, 8], dtype=tf.float32),
+            tf.TensorSpec(shape=[None], dtype=tf.int32),
+        ]
+    )
     def _graph_act(self, s, legal_idxs):
         # get q-values
         q = self.online_model(s, training=False)             # shape [1, n_actions]

@@ -317,46 +317,6 @@ def describe_state(state_id: int) -> str:
     )
 
 
-# Convert the game state into a multi-channel feature representation.
-def state_to_dqn_features(self, game_state: dict) -> np.ndarray:
-    if game_state is None:
-        return None
-
-    field_channel = np.copy(game_state['field'])
-    bomb_map = np.zeros_like(game_state['field'])
-    for (x, y), t in game_state['bombs']:
-        bomb_map[x, y] = t
-
-    explosion_map = np.copy(game_state['explosion_map'])
-    coin_map = np.zeros_like(game_state['field'])
-    for (x, y) in game_state['coins']:
-        coin_map[x, y] = 1
-
-    self_pos_channel = np.zeros_like(game_state['field'])
-    self_x, self_y = game_state['self'][3]
-    self_pos_channel[self_x, self_y] = 1
-
-    opp_pos_channel = np.zeros_like(game_state['field'])
-    for opponent in game_state['others']:
-        opp_x, opp_y = opponent[3]
-        opp_pos_channel[opp_x, opp_y] = 1
-
-    can_bomb_channel = np.ones_like(game_state['field']) * int(game_state['self'][2])
-
-    opp_can_bomb_channel = np.zeros_like(game_state['field'])
-    for opponent in game_state['others']:
-        opp_x, opp_y = opponent[3]
-        opp_can_bomb_channel[opp_x, opp_y] = int(opponent[2])
-
-    multi_channel_grid = np.stack((
-        field_channel, bomb_map, explosion_map, coin_map, self_pos_channel,
-        opp_pos_channel, can_bomb_channel, opp_can_bomb_channel
-    ), axis=-1)
-
-    return multi_channel_grid.flatten()
-
-
-
 def reward_from_events(events: List[str]) -> int:
     """
     *This is not a required function, but an idea to structure your code.*

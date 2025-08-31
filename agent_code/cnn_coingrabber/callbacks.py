@@ -13,6 +13,7 @@ from q_deep_agent import DeepQAgent
 from q_helpers import get_legal_actions, ACTS, N_ACTIONS, N_STATES, state_to_features, describe_state
 
 base_config = {
+    "n_episode"           : 2000,
     "n_eval"              : 100,    # Number of evaluation episodes every eval_freq training episodes
     "eval_freq"           : 100,
     "train_freq"          : 1,      # Train models every train_freq training episodes
@@ -20,9 +21,9 @@ base_config = {
     "discount"            : 0.8,    # Discount in all Q learning algorithms
     "learning_rate_decay" : 1,
     "exploration"         : 1.0,    # Initial exploration rate
-    "exploration_decay"   : 1e-2,   # Decrease of exploration rate for every action
+    "exploration_decay"   : 1e-3,   # Decrease of exploration rate for every action
     "exploration_min"     : 0.1,
-    "learning_rate"       : 1e-4,
+    "learning_rate"       : 1e-3,
     "debug"               : False,  # Print loss and evaluation information during training
     "plot_debug"          : False,  # Plot game outcomes
     "batch_size"          : 128,    # Batch size for DQN algorithm
@@ -63,13 +64,15 @@ def setup(self):
         inputs = layers.Input(shape=input_shape)  # (9, 9, channels)
 
         # Conv stack
-        x = layers.Conv2D(32, kernel_size=3, padding="same", activation=None)(inputs)
-        x = layers.BatchNormalization()(x)
+        x = layers.Conv2D(16, kernel_size=3, padding="same")(inputs)  # fewer filters
+        x = layers.ReLU()(x)
+
+        x = layers.Conv2D(32, kernel_size=3, padding="same")(x)
         x = layers.ReLU()(x)
 
         # Flatten and dense head
-        x = layers.Flatten()(x)
-        x = layers.Dense(32, activation="relu")(x)
+        x = layers.Flatten()(x)                     # 9*9*32 = 2592 units
+        x = layers.Dense(64, activation="relu")(x)  # small dense layer
 
         # Output Q-values for each action
         outputs = layers.Dense(num_actions, activation="linear")(x)
@@ -83,14 +86,15 @@ def setup(self):
             n_states=N_STATES,
             config=base_config,
     )
+
     net = build_cnn_dqn_model(self.agent.input_shape, self.agent.n_actions)
     net.compile(optimizer=tf.keras.optimizers.Adam(base_config["learning_rate"]), loss="mse")
     self.agent.online_model = net
     self.agent.target_model = net
 
-    #if not self.train:
-    #    # Load everything back
-    #    self.agent.load("./snapshots", base_name="experiment_01")
+    if not self.train:
+        # Load everything back
+        pass#self.agent.load("./snapshots", base_name="experiment_01")
 
 
 

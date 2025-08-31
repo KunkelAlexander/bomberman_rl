@@ -84,7 +84,7 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     self.agent.train()
 
     if self.game % 50 == 0:
-        print("cum rew", self.cum_rewards)
+        print("cum rew", self.cum_rewards, "exploration", self.agent.exploration)
         # Save agent state, q_visits, and models
         self.agent.save("./snapshots", base_name="experiment_01")
 
