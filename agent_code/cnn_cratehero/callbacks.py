@@ -96,7 +96,7 @@ def setup(self):
 
     if not self.train:
         # Load everything back
-        self.agent.load("./snapshots", base_name="experiment_01")
+        self.agent.load("./snapshots", base_name="default")
 
 
 

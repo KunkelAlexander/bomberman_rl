@@ -277,6 +277,8 @@ python3 q_pretrain_tabular.py \
   --evaluate --agents tq_allstar peaceful_agent rule_based_agent rule_based_agent
 ```
 
+ python3 main.py play --agents cnn_allstar_duel rule_based_agent peaceful_agent tq_representator --train 1 --scenario loot-crate --n-rounds 10000 --no-gui
+
 4. **Test the agent**:
 
 ```bash

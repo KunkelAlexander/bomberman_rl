@@ -2,12 +2,13 @@ import pickle
 from typing import List
 
 import events as e
-from q_helpers import get_legal_actions, state_to_tabular_features, reward_from_events, ACTS, N_ACTIONS, N_STATES, ACT_BITS
+from q_helpers import get_legal_actions, reward_from_events, ACTS, N_ACTIONS, N_STATES, ACT_BITS
 import numpy as np
 
 import os
 import numpy as np
 import tensorflow as tf
+import subprocess
 
 def setup_training(self):
     """
@@ -85,8 +86,16 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
 
     if self.game % 50 == 0:
         print("cum rew", self.cum_rewards, "exploration", self.agent.exploration)
+
+
+    if self.game % 1000  == 0:
+        print("exploration", self.agent.exploration)
         # Save agent state, q_visits, and models
-        self.agent.save("./snapshots", base_name="experiment_01")
+        self.agent.save("./snapshots", base_name="default")
+        self.agent.save("./snapshots", base_name="experiment_{self.chunk_idx:02d}")
+
+        evaluate_agent(self.chunk_idx, "./")
+        self.chunk_idx += 1
 
     self.cum_rewards = 0
 
@@ -95,3 +104,25 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     self.game += 1
 
 
+
+
+def evaluate_agent(chunk_idx, out_dir):
+    """Run main.py play with the trained agent and save stats."""
+    dicts_dir = os.path.join(out_dir, "dicts")
+    stats_file = os.path.join(dicts_dir, f"eval_chunk_{chunk_idx:04d}.json")
+
+    cmd = [
+        "python3", "../../main.py",
+        "play",
+        "--agents", "cnn_coingrabber",
+        "--scenario", "coin-heaven",
+        "--n-rounds", "50",
+        "--train", "0",
+        "--no-gui",
+        "--save-stats", stats_file,
+        "--match-name", f"chunk_{chunk_idx}"
+    ]
+
+    print(f"[Chunk {chunk_idx}] Evaluating agent with 50 rounds...")
+    subprocess.run(cmd, check=True)
+    print(f"[Chunk {chunk_idx}] Evaluation stats saved to {stats_file}")

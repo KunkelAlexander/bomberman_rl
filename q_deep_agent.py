@@ -3,7 +3,7 @@ import os
 import random
 import numpy as np
 from collections import deque
-
+import json
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint  # Import ModelCheckpoint callback
@@ -130,7 +130,7 @@ class DeepQAgent(Agent):
                 alpha      = config.get("prb_alpha", 0.6),
                 beta0      = config.get("prb_beta0", 0.4),
                 # anneal beta to 1 over the course of the training, in practive, we reach 1 a little sooner than at the end because of buffer filling up in the beginning
-                beta_steps = config.get("prb_beta_steps", self.n_episode),
+                beta_steps = config.get("prb_beta_steps", 1e5),
                 epsilon    = config.get("prb_epsilon", 1e-6),
             )
 
@@ -478,6 +478,12 @@ class DeepQAgent(Agent):
         # Save models
         self.online_model.save(os.path.join(model_dir, f"{base_name}_online_model.keras"))
         self.target_model.save(os.path.join(model_dir, f"{base_name}_target_model.keras"))
+
+
+        log_path = os.path.join(out_dir, f"{base_name}_training_log.json")
+        with open(log_path, "w") as f:
+            json.dump(self.training_log, f, indent=2)
+
         print(f"[SAVE] Agent state saved in {out_dir}")
 
     def load(self, in_dir, base_name="dqn_agent"):
@@ -486,12 +492,15 @@ class DeepQAgent(Agent):
         # Load metadata
         npz_path = os.path.join(in_dir, f"{base_name}.npz")
         metadata = np.load(npz_path, allow_pickle=True)["meta"].item()
-        self.learning_rate = metadata["learning_rate"]
         self.discount = metadata["discount"]
 
         # Load models
         online_model_path = os.path.join(model_dir, f"{base_name}_online_model.keras")
         target_model_path = os.path.join(model_dir, f"{base_name}_target_model.keras")
-        self.online_model = tf.keras.models.load_model(online_model_path)
-        self.target_model = tf.keras.models.load_model(target_model_path)
+        self.online_model = tf.keras.models.load_model(online_model_path, safe_mode=False)
+        self.target_model = tf.keras.models.load_model(target_model_path, safe_mode=False)
+
+        log_path = os.path.join(in_dir, f"{base_name}_training_log.json")
+        with open(log_path, "r") as f:
+            training_log = json.load(f)
         print(f"[LOAD] Agent state loaded from {in_dir}")

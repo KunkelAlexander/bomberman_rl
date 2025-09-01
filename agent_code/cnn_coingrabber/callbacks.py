@@ -23,7 +23,7 @@ base_config = {
     "exploration"         : 1.0,    # Initial exploration rate
     "exploration_decay"   : 1e-3,   # Decrease of exploration rate for every action
     "exploration_min"     : 0.1,
-    "learning_rate"       : 1e-3,
+    "learning_rate"       : 3e-4,
     "debug"               : False,  # Print loss and evaluation information during training
     "plot_debug"          : False,  # Plot game outcomes
     "batch_size"          : 128,    # Batch size for DQN algorithm

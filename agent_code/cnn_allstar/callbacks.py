@@ -54,7 +54,7 @@ def setup(self):
     """
 
 
-    def build_cnn_dqn_model(input_shape, num_actions):
+    def build_cnn_dqn_model(input_shape, num_actions, compile=True):
         """
         CNN DQN for Bomberman-like 9x9 grid inputs.
 
@@ -70,6 +70,7 @@ def setup(self):
         x = layers.Conv2D(32, kernel_size=3, padding="same")(x)
         x = layers.ReLU()(x)
 
+
         # Flatten and dense head
         x = layers.Flatten()(x)                     # 9*9*32 = 2592 units
         x = layers.Dense(64, activation="relu")(x)  # small dense layer
@@ -78,6 +79,8 @@ def setup(self):
         outputs = layers.Dense(num_actions, activation="linear")(x)
 
         model = models.Model(inputs=inputs, outputs=outputs)
+        if compile:
+            model.compile(optimizer=tf.keras.optimizers.Adam(base_config["learning_rate"]), loss="mse")
         return model
 
     self.agent = DeepQAgent(
@@ -87,14 +90,12 @@ def setup(self):
             config=base_config,
     )
 
-    net = build_cnn_dqn_model(self.agent.input_shape, self.agent.n_actions)
-    net.compile(optimizer=tf.keras.optimizers.Adam(base_config["learning_rate"]), loss="mse")
-    self.agent.online_model = net
-    self.agent.target_model = net
+    self.agent.online_model = build_cnn_dqn_model(self.agent.input_shape, self.agent.n_actions)
+    self.agent.target_model = build_cnn_dqn_model(self.agent.input_shape, self.agent.n_actions, compile=False)
 
     if not self.train:
         # Load everything back
-        self.agent.load("./snapshots", base_name="experiment_01")
+        self.agent.load("./snapshots", base_name="default")
 
 
 

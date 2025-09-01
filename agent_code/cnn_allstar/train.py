@@ -8,6 +8,7 @@ import numpy as np
 import os
 import numpy as np
 import tensorflow as tf
+import subprocess
 
 def setup_training(self):
     """
@@ -22,7 +23,8 @@ def setup_training(self):
     self.agent.start_game(is_training=True)
     self.iteration = 0
     self.game = 0
-    self.cum_rewards = 0
+    self.chunk_idx = 0
+    self.cumulative_reward = 0
 
 
 
@@ -46,7 +48,8 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     self.logger.debug(f'Encountered game event(s) {", ".join(map(repr, events))} in step {new_game_state["step"]}')
 
     reward = reward_from_events(events)
-    self.cum_rewards += reward
+    self.cumulative_reward += reward
+
     # state_to_features is defined in callbacks.py
     self.agent.update(iteration = self.iteration,
                       state = old_game_state,
@@ -72,7 +75,7 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     self.logger.debug(f'Encountered event(s) {", ".join(map(repr, events))} in final step')
 
     reward = reward_from_events(events)
-    self.cum_rewards += reward
+    self.cumulative_reward += reward
 
     self.agent.update(iteration = self.iteration,
                       state = last_game_state,
@@ -83,15 +86,40 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     self.agent.final_update(reward = 0) # All the final rewards are handed out before, no additional reward is necessary
     self.agent.train()
 
-    if self.game % 50 == 0:
-        print("cum rew", self.cum_rewards, "exploration", self.agent.exploration)
+    if self.game % 50  == 0:
+        print(f"Reward: {self.cumulative_reward} Exploration: {self.agent.exploration:.2f}")
+
+    if self.game % 999  == 0:
         # Save agent state, q_visits, and models
-        self.agent.save("./snapshots", base_name="experiment_01")
+        self.agent.save("./snapshots", base_name=f"experiment_{self.chunk_idx:02d}")
+        self.agent.save("./snapshots", base_name="default")
 
-    self.cum_rewards = 0
+        evaluate_agent(self.chunk_idx, "./")
+        self.chunk_idx += 1
 
 
+    self.cumulative_reward = 0
     self.iteration += 1
     self.game += 1
 
 
+
+def evaluate_agent(chunk_idx, out_dir):
+    """Run main.py play with the trained agent and save stats."""
+    dicts_dir = os.path.join(out_dir, "dicts")
+    stats_file = os.path.join(dicts_dir, f"eval_chunk_{chunk_idx:04d}.json")
+
+    cmd = [
+        "python3", "../../main.py",
+        "play",
+        "--agents", "cnn_allstar", "rule_based_agent", "peaceful_agent", "tq_representator",
+        "--n-rounds", "50",
+        "--train", "0",
+        "--no-gui",
+        "--save-stats", stats_file,
+        "--match-name", f"chunk_{chunk_idx}"
+    ]
+
+    print(f"[Chunk {chunk_idx}] Evaluating agent with 50 rounds...")
+    subprocess.run(cmd, check=True)
+    print(f"[Chunk {chunk_idx}] Evaluation stats saved to {stats_file}")
