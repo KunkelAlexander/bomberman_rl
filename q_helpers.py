@@ -342,11 +342,16 @@ def compute_danger_and_explosion_map(arena, bombs, explosion):
     explosion = explosion.copy()
     # The explosion map does not cover bombs that are just exploding (t=0)
     explosion[danger == 0] = EXPLOSION_TIMER
+    # We don't want active explosions in the danger map
+    danger[danger == 0] = INF
 
-    danger[danger == INF] = 0
+    # Make it such that higher danger values correspond to higher danger
+    danger =  danger.astype(np.float32)
+    danger[danger != INF] -= 1 # Shift everything by one since we removed active explosions
+    danger[danger != INF]  = (BOMB_TIMER - 1 - danger[danger != INF]) / (BOMB_TIMER - 1)
+    danger[danger == INF]  = 0
 
-    return danger.astype(np.float32), explosion
-
+    return danger, explosion
 
 def state_to_cnn_features(game_state: dict) -> np.ndarray:
     """
@@ -374,15 +379,15 @@ def state_to_cnn_features(game_state: dict) -> np.ndarray:
     # Bomb map: normalize timers
     bomb_map = np.zeros_like(field, dtype=np.float32)
     for (x, y), t in game_state['bombs']:
-        bomb_map[x, y] = t / BOMB_TIMER
+        # Normalise such that 0 = no bomb, 0.25 = very urgent bomb, 0.5 = urgent bomb, 0.75 = not so urgent bomb and 1 = new bomb
+        # The nonlinearity should be able to learn it even if we set bomb_map = t / BOMB_TIMER, but this might be easier and certainly does not hurt
+        bomb_map[x, y] = (BOMB_TIMER - t) / BOMB_TIMER
+
 
     danger_map, explosion_map = compute_danger_and_explosion_map(field, game_state['bombs'], game_state['explosion_map'])
 
-    # Danger map: normalize to [0,1]
-    danger_map    /= BOMB_TIMER
-
     # Explosion map: normalize to [0,1]
-    explosion_map /= EXPLOSION_TIMER
+    explosion_map = explosion_map / EXPLOSION_TIMER
 
     # Coins
     coin_map = np.zeros_like(field, dtype=np.float32)
@@ -433,18 +438,19 @@ def describe_cnn_state(tensor: np.ndarray, max_channels: int = 20):
 
 
     channel_names = [
-        "wall_map", "free_map", #"crate_map",
+        "wall_map", "free_map", "crate_map",
         "bomb_timer", "danger_map", "explosion_map",
-        "coin_map", "self_pos", #"opp_pos",
-        "can_bomb", #"opp_can_bomb"
+        "coin_map", "self_pos", "opp_pos",
+        "can_bomb", "opp_can_bomb"
     ]
 
     if channel_names is None:
         channel_names = [f"ch{c}" for c in range(C)]
 
     for c in range(min(C, max_channels)):
+        if c != 5 and c != 4: continue
         print(f"\n--- Channel {c} : {channel_names[c]} ---")
-        print(tensor[:, :, c])
+        print(tensor[:, :, c].T)
         # Give a little interpretation if channel is binary
         unique_vals = np.unique(tensor[:, :, c])
         if np.all(np.isin(unique_vals, [0,1])):
@@ -467,12 +473,15 @@ def reward_from_events(events: List[str]) -> int:
     """
     game_rewards = {
         e.COIN_COLLECTED:      0.2,
+        e.CRATE_DESTROYED:     0.05,
         e.KILLED_OPPONENT:     1.0,
-        e.CRATE_DESTROYED:     0.1,
-        e.KILLED_SELF:        -0.9,
-        e.BOMB_DROPPED:        0.02,
+        e.KILLED_SELF:        -1.0,
         e.GOT_KILLED:         -1.0,
-        e.WAITED:             -0.02,
+        e.WAITED:             -0.01,
+        e.MOVED_DOWN:         -0.01,
+        e.MOVED_LEFT:         -0.01,
+        e.MOVED_RIGHT:        -0.01,
+        e.MOVED_UP:           -0.01,
         e.INVALID_ACTION:     -0.02,
     }
     reward_sum = 0

@@ -296,7 +296,7 @@ class DeepQAgent(Agent):
             not_terminal  [i]          = 1 - d
 
             state_tensors.append(s)
-            next_state_tensors.append(s_)
+            next_state_tensors.append(s_ if not d else tf.zeros_like(s)) # Handle s_ for terminal states
 
         # 3) Concatenate into batch tensors [B, …]
         states      = tf.concat(state_tensors,      axis=0)  # [B, shape...]
@@ -451,8 +451,9 @@ class DeepQAgent(Agent):
                 "loss": float(loss)
             })
 
-        # update target network
-        self.update_target_weights()
+            # update target network
+            self.update_target_weights()
+
         self.training_round+= 1
 
 

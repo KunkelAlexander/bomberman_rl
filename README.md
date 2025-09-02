@@ -264,27 +264,28 @@ python3 main.py play \
 2. **Convert the training data**:
 
 ```bash
-python3 q_build_training_episodes.py agent_code/tq_demonstrator/runs/three_rule_based_peaceful_50k/
+python3 q_build_sharded_training_episodes.py agent_code/tq_demonstrator/runs/three_rule_based_peaceful_50k/ --cnn
 ```
 
 3. **Pretrain the agent** (single dataset):
 
 ```bash
-python3 q_pretrain_tabular.py \
-  --transitions-file agent_code/tq_demonstrator/runs/three_rule_based_peaceful_50k/transitions.pkl \
-  -o agent_code/tq_allstar/q_table.npz \
-  --training-episodes 5000 --num-chunks 10 \
-  --evaluate --agents tq_allstar peaceful_agent rule_based_agent rule_based_agent
+python3 q_pretrain_cnn.py -i agent_code/tq_demonstrator/runs/three_rule_based_peaceful_50k/ -o agent_code/cnn_allstar --evaluate --agents cnn_allstar peaceful_agent rule_based_agent rule_based_agent
 ```
 
  python3 main.py play --agents cnn_allstar_duel rule_based_agent peaceful_agent tq_representator --train 1 --scenario loot-crate --n-rounds 10000 --no-gui
 
 4. **Test the agent**:
 
-```bash
+```python
 python3 main.py play --agents tq_allstar peaceful_agent rule_based_agent rule_based_agent
 ```
 
+5.
+Performance
+```
+py-spy record --rate 10 -o pyspy.svg --function -- python3 q_pretrain_cnn.py -i agent_code/tq_demonstrator/runs/three_rule_based_peaceful_50k/ -o agent_code/cnn_allstar/snapshots/ --evaluate --agents cnn_allstar peaceful_agent rule_based_agent rule_based_agen
+```
 ---
 
 ## Training / code layout

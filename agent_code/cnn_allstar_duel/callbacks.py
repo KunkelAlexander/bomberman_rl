@@ -22,8 +22,8 @@ base_config = {
     "learning_rate_decay" : 1,
     "exploration"         : 1.0,    # Initial exploration rate
     "exploration_decay"   : 1e-3,   # Decrease of exploration rate for every action
-    "exploration_min"     : 0.05,
-    "learning_rate"       : 1e-4,
+    "exploration_min"     : 0.1,
+    "learning_rate"       : 3e-4,
     "debug"               : False,  # Print loss and evaluation information during training
     "plot_debug"          : False,  # Plot game outcomes
     "batch_size"          : 64,    # Batch size for DQN algorithm
@@ -54,36 +54,32 @@ def setup(self):
     """
     def build_cnn(input_shape, num_actions, lr=1e-4, clipnorm=10.0):
         inputs = layers.Input(shape=input_shape)
+        x = layers.Conv2D(32, 3, padding="same", activation="relu")(inputs)
+        x = layers.Conv2D(64, 3, padding="same", activation="relu")(x)
+        x = layers.Conv2D(64, 3, padding="same", activation="relu")(x)
 
-        # Your conv stack
-        x = layers.Conv2D(16, 3, padding="same")(inputs)
-        x = layers.ReLU()(x)
-        x = layers.Conv2D(32, 3, padding="same")(x)
-        x = layers.ReLU()(x)
-        x = layers.Conv2D(64, 3, padding="same")(x)
-        x = layers.ReLU()(x)
+        x = layers.Flatten()(x)                 # keep spatial info
+        x = layers.Dense(128, activation="relu")(x)
 
-        # Trunk
-        x = layers.Flatten()(x)
-        x = layers.Dense(64, activation="relu")(x)   # shared representation
+        # value
+        v = layers.Dense(128, activation="relu")(x)
+        v = layers.Dense(1)(v)
 
-        # Value stream
-        v = layers.Dense(64, activation="relu")(x)
-        v = layers.Dense(1, activation="linear")(v)
+        # advantage
+        a = layers.Dense(128, activation="relu")(x)
+        a = layers.Dense(num_actions)(a)
 
-        # Advantage stream
-        a = layers.Dense(64, activation="relu")(x)
-        a = layers.Dense(num_actions, activation="linear")(a)
+        # dueling combine (use Lambda to stay on-graph)
+        a_mean = layers.Lambda(lambda t: tf.reduce_mean(t, axis=1, keepdims=True))(a)
+        q = layers.Add()([v, layers.Subtract()([a, a_mean])])
 
-        # Combine
-        q = v + (a - tf.reduce_mean(a, axis=1, keepdims=True))
-
-        model = models.Model(inputs, q)
+        model = tf.keras.Model(inputs, q)
         model.compile(
             optimizer=tf.keras.optimizers.Adam(learning_rate=lr, clipnorm=clipnorm),
             loss=tf.keras.losses.Huber()
         )
         return model
+
 
     self.agent = DeepQAgent(
             agent_id=0,

@@ -22,7 +22,7 @@ def parse_args():
 
 
     # I/O
-    p.add_argument("--transitions-file", "-i", required=True, nargs="+",
+    p.add_argument("--transitions-dir", "-i", required=True,
                    help="Path(s) to one or more transitions pickle files (list of episodes).")
     p.add_argument("--output-dir", "-o", required=True,
                    help="Path to output .npz file where NNs will be saved.")
@@ -110,6 +110,68 @@ def evaluate_agent(chunk_idx, out_dir, args):
     subprocess.run(cmd, check=True)
     print(f"[Chunk {chunk_idx}] Evaluation stats saved to {stats_file}")
 
+import os, gzip, pickle, gc, glob
+
+def iter_shards(shards_dir):
+    # supports both .pkl and .pkl.gz
+    files = sorted(glob.glob(os.path.join(shards_dir, "episodes-shard-*.pkl*")))
+    for fp in files:
+        if fp.endswith(".gz"):
+            with gzip.open(fp, "rb") as f:
+                yield pickle.load(f)  # list[episode]
+        else:
+            with open(fp, "rb") as f:
+                yield pickle.load(f)
+
+def train_from_shards(args, agent, shards_dir, episodes_per_train=None):
+    """
+    episodes_per_train: if set, will train after ingesting at least this many episodes
+                        (useful when shard_size is large).
+    """
+    print("Streaming shards & training")
+    len_episodes = 0
+    agent.start_game(is_training=True)
+
+    out_dir = os.path.dirname(args.output_dir)
+    if out_dir and not os.path.isdir(out_dir):
+        os.makedirs(out_dir, exist_ok=True)
+
+    chunk_idx = 1
+
+    for shard in iter_shards(shards_dir):
+
+        print(f"Ingesting shard {chunk_idx}")
+        # ingest shard
+        for episode in shard:
+            for (idx, state, legal_actions, action, reward, done, next_state, next_legal_actions) in episode:
+                agent.replay_sampler.add(
+                    agent.replay_buffer,
+                    [state, legal_actions, action, next_state, next_legal_actions, reward, done]
+                )
+            len_episodes += 1
+
+        print(f"Training {args.grad_steps} iterations")
+        agent.train()
+
+        if chunk_idx % 10 == 0:
+
+            print(f"Saving checkpoint")
+
+            # checkpoints / eval
+            agent.save(out_dir, base_name=f"chunk_{int(chunk_idx/10):02d}")
+            agent.save(out_dir, base_name="default")
+
+            if args.evaluate:
+                evaluate_agent(chunk_idx, out_dir, args)
+
+        chunk_idx += 1
+
+        # free memory ASAP
+        del shard
+        gc.collect()
+
+    print(f"Ingested {len_episodes} episodes from shards in {shards_dir}")
+
 
 def main():
     args = parse_args()
@@ -176,55 +238,8 @@ def main():
     agent.online_model.compile(optimizer=tf.keras.optimizers.Adam(config["learning_rate"]), loss="mse")
     agent.target_model = build_cnn_dqn_model(agent.input_shape, agent.n_actions)
 
-    print("Loading transitions")
-    len_episodes = 0
-
-    for tfile in args.transitions_file:
-        if not os.path.isfile(tfile):
-            raise FileNotFoundError(f"Could not find {tfile}")
-        with open(tfile, "rb") as f:
-            episodes = pickle.load(f)
-
-        for episode in episodes:
-            for (idx, state, legal_actions, action, reward, done, next_state, next_legal_actions) in episode:
-                agent.replay_sampler.add(agent.replay_buffer, [state, legal_actions, action, next_state, next_legal_actions, reward, done])
-            len_episodes += 1
-
-        del episodes
-    print(f"Loaded {len_episodes} episodes from {len(args.transitions_file)} file(s).")
-
-    agent.start_game(is_training=True)
-
-    out_dir = os.path.dirname(args.output_dir)
-    if out_dir and not os.path.isdir(out_dir):
-        os.makedirs(out_dir, exist_ok=True)
-
-    chunk_idx = 1
-    while chunk_idx <= args.n_episode:
-        print(f"{len(agent.training_episodes)} episodes remaining. "
-              f"Visited {len(agent.q)} states")
-
-        train_kwargs = {}
-        if args.training_transitions is not None:
-            train_kwargs["num_transitions"] = args.training_transitions
-        elif args.training_episodes is not None:
-            train_kwargs["num_episodes"] = args.training_episodes
-
-        agent.train(**train_kwargs)
-
-        # Bookkeeping
-        agent.save(out_dir, base_name=f"chunk_{chunk_idx}")
-        # Used for evaluation
-        agent.save(out_dir)
-
-        if args.evaluate:
-            evaluate_agent(chunk_idx, out_dir, args)
-
-        chunk_idx += 1
-
-
-
-    print("Training complete.")
+    train_from_shards(args, agent, shards_dir=args.transitions_dir,
+                  episodes_per_train=250)
 
 
 if __name__ == "__main__":
