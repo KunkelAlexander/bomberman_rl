@@ -5,14 +5,20 @@ import pickle
 import subprocess
 import os
 
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers, models
+
+tf.config.run_functions_eagerly(True)
+tf.autograph.set_verbosity(3)
+
+
 import q_helpers
 from q_deep_agent import DeepQAgent
 
 from q_helpers import get_legal_actions, ACTS, N_ACTIONS, N_STATES, state_to_tabular_features, describe_tabular_state
 
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers, models
+
 
 # --- Argument Parsing for CNN Agent ---
 def parse_args():
@@ -30,7 +36,7 @@ def parse_args():
     # Training control
     p.add_argument("--n-episode", type=int, default=1000,
                    help="Number of training episodes.")
-    p.add_argument("--grad-steps", type=int, default=100,
+    p.add_argument("--grad-steps", type=int, default=300,
                    help="Number of gradient updates per training step.")
 
 
@@ -136,11 +142,12 @@ def train_from_shards(args, agent, shards_dir, episodes_per_train=None):
     if out_dir and not os.path.isdir(out_dir):
         os.makedirs(out_dir, exist_ok=True)
 
-    chunk_idx = 1
+    chunk_idx = 0
+    shard_i   = 1
 
     for shard in iter_shards(shards_dir):
 
-        print(f"Ingesting shard {chunk_idx}")
+        print(f"Ingesting shard {shard_i}")
         # ingest shard
         for episode in shard:
             for (idx, state, legal_actions, action, reward, done, next_state, next_legal_actions) in episode:
@@ -153,19 +160,19 @@ def train_from_shards(args, agent, shards_dir, episodes_per_train=None):
         print(f"Training {args.grad_steps} iterations")
         agent.train()
 
-        if chunk_idx % 10 == 0:
+        if shard_i % 10 == 0:
 
             print(f"Saving checkpoint")
 
             # checkpoints / eval
-            agent.save(out_dir, base_name=f"chunk_{int(chunk_idx/10):02d}")
+            agent.save(out_dir, base_name=f"chunk_{chunk_idx:02d}")
             agent.save(out_dir, base_name="default")
 
             if args.evaluate:
                 evaluate_agent(chunk_idx, out_dir, args)
 
-        chunk_idx += 1
-
+            chunk_idx += 1
+        shard_i += 1
         # free memory ASAP
         del shard
         gc.collect()

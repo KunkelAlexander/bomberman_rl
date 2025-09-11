@@ -284,7 +284,7 @@ python3 main.py play --agents tq_allstar peaceful_agent rule_based_agent rule_ba
 5.
 Performance
 ```
-py-spy record --rate 10 -o pyspy.svg --function -- python3 q_pretrain_cnn.py -i agent_code/tq_demonstrator/runs/three_rule_based_peaceful_50k/ -o agent_code/cnn_allstar/snapshots/ --evaluate --agents cnn_allstar peaceful_agent rule_based_agent rule_based_agen
+py-spy record --rate 10 -o pyspy.svg --function -- python3 q_pretrain_cnn.py -i agent_code/tq_demonstrator/runs/three_rule_based_peaceful_50k/ -o agent_code/cnn_allstar/snapshots/ --evaluate --agents cnn_allstar peaceful_agent rule_based_agent rule_based_agent
 ```
 ---
 
