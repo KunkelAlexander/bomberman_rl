@@ -58,6 +58,28 @@ class PrioritizedReplaySampler(ReplaySampler):
         buffer.add(transition)
 
 
+class WeightedTrainer:
+    def __init__(self, model, learning_rate):
+        self.model = model
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate)
+        self.loss_fn = tf.keras.losses.MeanSquaredError(
+            reduction=tf.keras.losses.Reduction.NONE  # we need per-sample losses
+        )
+
+    @tf.function(jit_compile=True)
+    def train_step(self, x, y, sample_weights=None):
+        with tf.GradientTape() as tape:
+            y_pred = self.model(x, training=True)
+            per_sample_losses = self.loss_fn(y, y_pred)   # shape (B,)
+            if sample_weights is not None:
+                per_sample_losses *= tf.cast(sample_weights, per_sample_losses.dtype)
+            loss = tf.reduce_mean(per_sample_losses)
+
+        grads = tape.gradient(loss, self.model.trainable_variables)
+        self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+        return loss
+
+
 
 
 class DeepQAgent(Agent):
@@ -130,7 +152,7 @@ class DeepQAgent(Agent):
                 alpha      = config.get("prb_alpha", 0.6),
                 beta0      = config.get("prb_beta0", 0.4),
                 # anneal beta to 1 over the course of the training, in practive, we reach 1 a little sooner than at the end because of buffer filling up in the beginning
-                beta_steps = config.get("prb_beta_steps", 1e5),
+                beta_steps = config.get("prb_beta_steps", 2e5),
                 epsilon    = config.get("prb_epsilon", 1e-6),
             )
 
@@ -498,7 +520,9 @@ class DeepQAgent(Agent):
         # Load models
         online_model_path = os.path.join(model_dir, f"{base_name}_online_model.keras")
         target_model_path = os.path.join(model_dir, f"{base_name}_target_model.keras")
+        print("Load online model")
         self.online_model = tf.keras.models.load_model(online_model_path, safe_mode=False)
+        print("Load target model")
         self.target_model = tf.keras.models.load_model(target_model_path, safe_mode=False)
 
         log_path = os.path.join(in_dir, f"{base_name}_training_log.json")

@@ -9,9 +9,6 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers, models
 
-tf.config.run_functions_eagerly(True)
-tf.autograph.set_verbosity(3)
-
 
 import q_helpers
 from q_deep_agent import DeepQAgent
@@ -36,7 +33,7 @@ def parse_args():
     # Training control
     p.add_argument("--n-episode", type=int, default=1000,
                    help="Number of training episodes.")
-    p.add_argument("--grad-steps", type=int, default=300,
+    p.add_argument("--grad-steps", type=int, default=5000,
                    help="Number of gradient updates per training step.")
 
 
@@ -49,13 +46,13 @@ def parse_args():
                    help="Scenario to use during evaluation.")
     p.add_argument("--main-py", default="main.py",
                    help="Path to main.py script.")
-    p.add_argument("--eval-rounds", type=int, default=50,
+    p.add_argument("--eval-rounds", type=int, default=100,
                    help="Number of rounds for evaluation.")
 
     # Core hyperparameters
     p.add_argument("--discount", type=float, default=0.8,
                    help="Discount factor γ.")
-    p.add_argument("--learning-rate", "-l", type=float, default=1e-3,
+    p.add_argument("--learning-rate", "-l", type=float, default=1e-4,
                    help="Learning rate.")
     p.add_argument("--learning-rate-decay", "-d", type=float, default=1.0,
                    help="Learning rate decay factor.")
@@ -71,19 +68,19 @@ def parse_args():
     # Replay buffer
     p.add_argument("--replay-buffer-size", type=int, default=1000000,
                    help="Replay buffer capacity.")
-    p.add_argument("--replay-buffer-min", type=int, default=1000,
+    p.add_argument("--replay-buffer-min", type=int, default=100000,
                    help="Minimum buffer size before training starts.")
 
     # Target network
     p.add_argument("--target-update-tau", type=float, default=0.1,
                    help="Soft update weight for target network.")
-    p.add_argument("--target-update-freq", type=int, default=10,
+    p.add_argument("--target-update-freq", type=int, default=30,
                    help="Hard update frequency (in episodes).")
     p.add_argument("--target-update-mode", choices=["hard", "soft"], default="hard",
                    help="Target network update strategy.")
 
     # Misc
-    p.add_argument("--batch-size", type=int, default=128,
+    p.add_argument("--batch-size", type=int, default=64,
                    help="Batch size for training.")
     p.add_argument("--board-encoding", default="encoding_cnn",
                    help="State encoding method (default CNN).")
@@ -129,11 +126,7 @@ def iter_shards(shards_dir):
             with open(fp, "rb") as f:
                 yield pickle.load(f)
 
-def train_from_shards(args, agent, shards_dir, episodes_per_train=None):
-    """
-    episodes_per_train: if set, will train after ingesting at least this many episodes
-                        (useful when shard_size is large).
-    """
+def train_from_shards(args, agent, shards_dir):
     print("Streaming shards & training")
     len_episodes = 0
     agent.start_game(is_training=True)
@@ -215,38 +208,42 @@ def main():
     )
 
 
-    def build_cnn_dqn_model(input_shape, num_actions):
-        """
-        CNN DQN for Bomberman-like 9x9 grid inputs.
 
-        input_shape: (rows, cols, channels), e.g. (9, 9, 11)
-        num_actions: number of discrete actions
-        """
-        inputs = layers.Input(shape=input_shape)  # (9, 9, channels)
+    def build_cnn_dqn_model(input_shape, num_actions, lr=1e-4, clipnorm=10.0):
+        inputs = layers.Input(shape=input_shape)
+        x = layers.Conv2D(16, 3, padding="same", activation="relu")(inputs)
+        x = layers.Conv2D(32, 3, padding="same", activation="relu")(x)
+        x = layers.Conv2D(64, 3, padding="same", activation="relu")(x)
 
-        # Conv stack
-        x = layers.Conv2D(16, kernel_size=3, padding="same")(inputs)  # fewer filters
-        x = layers.ReLU()(x)
+        x = layers.Flatten()(x)                 # keep spatial info
+        x = layers.Dense(128, activation="relu")(x)
 
-        x = layers.Conv2D(32, kernel_size=3, padding="same")(x)
-        x = layers.ReLU()(x)
+        # value
+        v = layers.Dense(128, activation="relu")(x)
+        v = layers.Dense(1)(v)
 
-        # Flatten and dense head
-        x = layers.Flatten()(x)                     # 9*9*32 = 2592 units
-        x = layers.Dense(64, activation="relu")(x)  # small dense layer
+        # advantage
+        a = layers.Dense(128, activation="relu")(x)
+        a = layers.Dense(num_actions)(a)
 
-        # Output Q-values for each action
-        outputs = layers.Dense(num_actions, activation="linear")(x)
+        # dueling combine (use Lambda to stay on-graph)
+        a_mean = layers.Lambda(lambda t: tf.reduce_mean(t, axis=1, keepdims=True))(a)
+        q = layers.Add()([v, layers.Subtract()([a, a_mean])])
 
-        model = models.Model(inputs=inputs, outputs=outputs)
+        model = tf.keras.Model(inputs, q)
+        model.compile(
+            optimizer=tf.keras.optimizers.Adam(learning_rate=lr, clipnorm=clipnorm),
+            loss=tf.keras.losses.Huber()
+        )
         return model
 
     agent.online_model = build_cnn_dqn_model(agent.input_shape, agent.n_actions)
     agent.online_model.compile(optimizer=tf.keras.optimizers.Adam(config["learning_rate"]), loss="mse")
     agent.target_model = build_cnn_dqn_model(agent.input_shape, agent.n_actions)
 
-    train_from_shards(args, agent, shards_dir=args.transitions_dir,
-                  episodes_per_train=250)
+    train_from_shards(args, agent, shards_dir=args.transitions_dir)
+
+
 
 
 if __name__ == "__main__":

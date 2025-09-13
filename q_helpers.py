@@ -448,7 +448,6 @@ def describe_cnn_state(tensor: np.ndarray, max_channels: int = 20):
         channel_names = [f"ch{c}" for c in range(C)]
 
     for c in range(min(C, max_channels)):
-        if c != 5 and c != 4: continue
         print(f"\n--- Channel {c} : {channel_names[c]} ---")
         print(tensor[:, :, c].T)
         # Give a little interpretation if channel is binary
@@ -472,17 +471,12 @@ def reward_from_events(events: List[str]) -> int:
     certain behavior.
     """
     game_rewards = {
+        e.CRATE_DESTROYED:     0.01,
         e.COIN_COLLECTED:      0.2,
-        e.CRATE_DESTROYED:     0.05,
         e.KILLED_OPPONENT:     1.0,
-        e.KILLED_SELF:        -1.0,
-        e.GOT_KILLED:         -1.0,
+        e.GOT_KILLED:         -2.0,
         e.WAITED:             -0.01,
-        e.MOVED_DOWN:         -0.01,
-        e.MOVED_LEFT:         -0.01,
-        e.MOVED_RIGHT:        -0.01,
-        e.MOVED_UP:           -0.01,
-        e.INVALID_ACTION:     -0.02,
+        e.INVALID_ACTION:     -0.01,
     }
     reward_sum = 0
     for event in events:
