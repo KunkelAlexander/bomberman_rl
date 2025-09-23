@@ -33,7 +33,7 @@ def parse_args():
     # Training control
     p.add_argument("--n-episode", type=int, default=1000,
                    help="Number of training episodes.")
-    p.add_argument("--grad-steps", type=int, default=5000,
+    p.add_argument("--grad-steps", type=int, default=1000,
                    help="Number of gradient updates per training step.")
 
 

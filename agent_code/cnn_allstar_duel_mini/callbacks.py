@@ -17,13 +17,13 @@ base_config = {
     "n_eval"              : 100,    # Number of evaluation episodes every eval_freq training episodes
     "eval_freq"           : 100,
     "train_freq"          : 1,      # Train models every train_freq training episodes
-    "grad_steps"          : 8,      # Number of gradient updates per training step
+    "grad_steps"          : 4,      # Number of gradient updates per training step
     "discount"            : 0.8,    # Discount in all Q learning algorithms
     "learning_rate_decay" : 1,
     "exploration"         : 1.0,    # Initial exploration rate
     "exploration_decay"   : 1e-3,   # Decrease of exploration rate for every action
     "exploration_min"     : 1e-2,
-    "learning_rate"       : 1e-4,
+    "learning_rate"       : 3e-4,
     "debug"               : False,  # Print loss and evaluation information during training
     "plot_debug"          : False,  # Plot game outcomes
     "batch_size"          : 128,    # Batch size for DQN algorithm
@@ -31,7 +31,7 @@ base_config = {
     "replay_buffer_size"  : 100000,  # Replay buffer for DQN algorithm
     "replay_buffer_min"   : 10000,   # minimum size before we start training
     "target_update_tau"   : 0.1,    # Weight for update in dual DQN architecture target = (1 - tau) * target + tau * online
-    "target_update_freq"  : 100,     # Update target network every n episodes
+    "target_update_freq"  : 30,     # Update target network every n episodes
     "target_update_mode"  : "hard", # "hard": update every target_update freq or "soft": update using Polyakov rule with target_update_tau
 }
 
@@ -54,18 +54,25 @@ def setup(self):
     """
     def build_cnn(input_shape, num_actions, lr=1e-4, clipnorm=10.0):
         inputs = layers.Input(shape=input_shape)
-        x = layers.Conv2D(16, 3, padding="same", activation="relu")(inputs)
-        x = layers.Conv2D(32, 3, padding="same", activation="relu")(x)
-        x = layers.Conv2D(64, 3, padding="same", activation="relu")(x)
+        # number_parameters = out_channels * (in_channels * kernel_h * kernel_w + 1)  # 1 for bias
+        # 1600 params
+        x = layers.Conv2D(16, 3, padding="same", activation="relu")(inputs) # (9, 9, 11) to (9, 9, 16)
+        # 4640 params
+        x = layers.Conv2D(32, 3, padding="same", activation="relu")(x) # (9, 9, 16) to (9, 9, 32)
+        # 18496 params
+        x = layers.Conv2D(64, 3, padding="same", activation="relu")(x) # (9, 9, 32) to (9, 9, 64)
 
-        x = layers.Flatten()(x)                 # keep spatial info
+        # Average over channels
+        #x = tf.reduce_mean(x, axis=-1, keepdims=True)  # (9,9,1)
+        x = layers.Flatten()(x) # keep spatial info, 9*9*64 = 5184 features
+        # (output +1) * 128 params = 663680 params
         x = layers.Dense(128, activation="relu")(x)
 
-        # value
+        # value -  16512 params
         v = layers.Dense(128, activation="relu")(x)
         v = layers.Dense(1)(v)
 
-        # advantage
+        # advantage  -  16512 params
         a = layers.Dense(128, activation="relu")(x)
         a = layers.Dense(num_actions)(a)
 
