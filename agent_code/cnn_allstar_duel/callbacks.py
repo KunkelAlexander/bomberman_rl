@@ -18,7 +18,7 @@ base_config = {
     "eval_freq"           : 100,
     "train_freq"          : 1,      # Train models every train_freq training episodes
     "grad_steps"          : 4,      # Number of gradient updates per training step
-    "discount"            : 0.95,    # Discount in all Q learning algorithms
+    "discount"            : 0.8,    # Discount in all Q learning algorithms
     "learning_rate_decay" : 1,
     "exploration"         : 1.0,    # Initial exploration rate
     "exploration_decay"   : 1e-3,   # Decrease of exploration rate for every action
@@ -31,9 +31,9 @@ base_config = {
     "replay_buffer_size"  : 100000,  # Replay buffer for DQN algorithm
     "replay_buffer_min"   : 10000,   # minimum size before we start training
     "target_update_tau"   : 0.1,    # Weight for update in dual DQN architecture target = (1 - tau) * target + tau * online
-    "target_update_freq"  : 30,     # Update target network every n episodes
+    "target_update_freq"  : 10,     # Update target network every n episodes
     "target_update_mode"  : "hard", # "hard": update every target_update freq or "soft": update using Polyakov rule with target_update_tau
-    "prb_beta_steps"      : 4e6
+    "prb_beta_steps"      : 2e5
 }
 
 
@@ -55,9 +55,9 @@ def setup(self):
     """
     def build_cnn(input_shape, num_actions, lr=1e-4, clipnorm=10.0):
         inputs = layers.Input(shape=input_shape)
-        x = layers.Conv2D(32, 3, padding="same", activation="relu")(inputs)
+        x = layers.Conv2D(64, 3, padding="same", activation="relu")(inputs)
         x = layers.Conv2D(64, 3, padding="same", activation="relu")(x)
-        x = layers.Conv2D(128, 3, padding="same", activation="relu")(x)
+        x = layers.Conv2D(64, 3, padding="same", activation="relu")(x)
         x = layers.GlobalAveragePooling2D()(x)
 
         x = layers.Flatten()(x)                 # keep spatial info
