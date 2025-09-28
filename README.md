@@ -1,6 +1,6 @@
 # Q‑Learning with **BombeRLe**
 
-This repository implements both **tabular Q‑learning** and a **Deep Q‑Network (DQN)** for the classic game *Bomberman* using the BombeRLe environment.
+This repository implements both **tabular Q‑learning** and a **Deep Q‑Network (DQN)** for the classic game *Bomberman* using the BombeRLe environment. The code is explained in the blog posts on [tabular Q-learning](https://kunkelalexander.github.io/blog/computers-learning-bomberman-tabular-q/) and [deep Q-learning](https://kunkelalexander.github.io/blog/computers-learning-bomberman-deep-q/).
 <img src="figures/1_gameplay.gif" width=60%>
 
 ## Table of contents
@@ -21,6 +21,8 @@ All **new agents** live under the `agent_code/` directory. A typical layout look
 
 ```text
 .
+├── post_1.ipynb                       # Generate figures for blog post on tabular Q-learning
+├── post_2.ipynb                       # Generate figures for blog post on deep Q-learning
 ├── agent_code/
 │   ├── peaceful_agent/
 │   ├── rule_based_agent/
@@ -28,16 +30,14 @@ All **new agents** live under the `agent_code/` directory. A typical layout look
 │   ├── tq_coingrabber/
 │   ├── tq_cratehero/
 │   ├── tq_allstar/
-│   ├── cnn_coingrabber/
-│   ├── cnn_cratehero/
 │   └── cnn_allstar/
 ├── q_agent_parent.py
 ├── q_build_training_episodes.py
-├── q_deep_agent.py
+├── q_deep_agent.py                     # Core deep Q-learning implementation
 ├── q_optuna.py
 ├── q_pretrain_tabular.py
 ├── q_prioritised_experience_replay.py
-├── q_tabular_agent.py          # Core tabular Q-learning implementation
+├── q_tabular_agent.py                  # Core tabular Q-learning implementation
 ├── q_train_tabular.py
 └── figures/
 ```
@@ -51,8 +51,6 @@ All **new agents** live under the `agent_code/` directory. A typical layout look
 
 ## Agents
 
-* **cnn\_coingrabber** – CNN DQN-agent trained for coin‑heaven scenario.
-* **cnn\_cratehero** – CNN DQN-agent trained for loot‑crate scenario.
 * **cnn\_allstar** – CNN DQN-agent trained on multi‑opponent games.
 * **tq\_coingrabber** – tabular Q-agent trained for coin‑heaven scenario.
 * **tq\_cratehero** – tabular Q-agent trained for loot‑crate scenario.
@@ -61,7 +59,7 @@ All **new agents** live under the `agent_code/` directory. A typical layout look
 
 ## Usage
 
-Below are minimal, end‑to‑end scripts to **reproduce the results** shown in the blog post. Adjust paths if your run folders differ.
+Below are some minimal, end‑to‑end scripts to **reproduce the results** shown in the blog post. Adjust paths if your run folders differ.
 
 ### Tabular Q-Coingrabber
 
@@ -98,7 +96,6 @@ python3 q_pretrain_tabular.py \
 python3 main.py play --agents tq_coingrabber --scenario coin-heaven
 ```
 
----
 
 ### Tabular Q-Crate‑hero
 
@@ -135,8 +132,6 @@ python3 q_pretrain_tabular.py \
 python3 main.py play --agents tq_cratehero --scenario loot-crate
 ```
 
----
-
 ### Tabular Q-Allstar
 
 <img src="figures/7_allstar.gif" width=60% class="center">
@@ -171,13 +166,11 @@ python3 q_pretrain_tabular.py \
 python3 main.py play --agents tq_allstar peaceful_agent rule_based_agent rule_based_agent
 ```
 
----
 
 
+### CNN Allstar
 
-### CNN Q-Coingrabber
-
-<img src="figures/5_coin_grabber.gif" width=60%>
+<img src="figures/16_cnn_allstar.gif" width=60%>
 
 1. **Generate and store raw game data** (game state dictionary at every time‑step):
 
@@ -216,72 +209,16 @@ python3 main.py play --agents tq_coingrabber --scenario coin-heaven
 
 <img src="figures/6_crate_hero.gif" width=60%>
 
-1. **Generate and store raw game data**:
+1. **Train the agent**:
 
 ```bash
-python3 main.py play \
-  --agents tq_demonstrator \
-  --train 1 --n-rounds 50000 \
-  --scenario loot-crate --no-gui
+python3 main.py play --agents cnn_allstar rule_based_agent peaceful_agent tq_representator --train 1 --n-rounds 100000 --no-gui
 ```
 
-2. **Convert the training data**:
+2. **Test the agent**:
 
 ```bash
-python3 q_build_training_episodes.py agent_code/tq_demonstrator/runs/loot_crate_50k/
-```
-
-3. **Pretrain the agent**:
-
-```bash
-python3 q_pretrain_tabular.py \
-  -i agent_code/tq_demonstrator/runs/loot_crate_50k/transitions.pkl \
-  --training-episodes 5000 --num-chunks 10 \
-  -o agent_code/tq_cratehero/q_table.npz \
-  --evaluate --agents tq_cratehero --scenario loot-crate
-```
-
-4. **Test the agent**:
-
-```bash
-python3 main.py play --agents tq_cratehero --scenario loot-crate
-```
-
----
-
-### CNN Q-Allstar
-
-<img src="figures/7_allstar.gif" width=60% class="center">
-
-1. **Generate and store raw game data** (three opponents: peaceful + two rule‑based):
-
-```bash
-python3 main.py play \
-  --agents tq_demonstrator peaceful_agent rule_based_agent rule_based_agent \
-  --train 1 --n-rounds 50000 --no-gui
-```
-
-2. **Convert the training data**:
-
-```bash
-python3 q_build_sharded_training_episodes.py agent_code/tq_demonstrator/runs/three_rule_based_peaceful_50k/ --cnn
-```
-
-3 a). **Pretrain the agent** (single dataset):
-
-```bash
-python3 q_pretrain_cnn.py -i agent_code/tq_demonstrator/runs/three_rule_based_peaceful_50k/ -o agent_code/cnn_allstar --evaluate --agents cnn_allstar peaceful_agent rule_based_agent rule_based_agent
-```
-
-3 b). **Train the agent**
-```bash
-python3 main.py play --agents cnn_allstar_duel rule_based_agent peaceful_agent tq_representator --train 1 --n-rounds 100000 --no-gui
-```
-
-4. **Test the agent**:
-
-```bash
-python3 main.py play --agents tq_allstar peaceful_agent rule_based_agent rule_based_agent
+python3 main.py play --agents cnn_allstar rule_based_agent peaceful_agent tq_representator
 ```
 
 ### Profiling
