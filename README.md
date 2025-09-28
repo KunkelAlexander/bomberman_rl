@@ -280,16 +280,21 @@ python3 main.py play --agents cnn_allstar_duel rule_based_agent peaceful_agent t
 
 4. **Test the agent**:
 
-```python
+```bash
 python3 main.py play --agents tq_allstar peaceful_agent rule_based_agent rule_based_agent
 ```
 
-5.
-Performance
-```
+### Profiling
+
+```bash
 py-spy record --rate 10 -o pyspy.svg --function -- python3 q_pretrain_cnn.py -i agent_code/tq_demonstrator/runs/three_rule_based_peaceful_50k/ -o agent_code/cnn_allstar/snapshots/ --evaluate --agents cnn_allstar peaceful_agent rule_based_agent rule_based_agent
 ```
----
+
+### Performance
+
+```bash
+python3 main.py play --agents cnn_allstar_duel peaceful_agent rule_based_agent tq_representator --n-rounds 1000 --save-stats --no-gui
+```
 
 ## Training / code layout
 

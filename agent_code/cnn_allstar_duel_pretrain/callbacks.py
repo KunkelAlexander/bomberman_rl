@@ -54,8 +54,8 @@ def setup(self):
     """
     def build_cnn(input_shape, num_actions, lr=1e-4, clipnorm=10.0):
         inputs = layers.Input(shape=input_shape)
-        x = layers.Conv2D(16, 3, padding="same", activation="relu")(inputs)
-        x = layers.Conv2D(32, 3, padding="same", activation="relu")(x)
+        x = layers.Conv2D(32, 3, padding="same", activation="relu")(inputs)
+        x = layers.Conv2D(64, 3, padding="same", activation="relu")(x)
         x = layers.Conv2D(64, 3, padding="same", activation="relu")(x)
 
         x = layers.Flatten()(x)                 # keep spatial info

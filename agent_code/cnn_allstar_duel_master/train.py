@@ -2,7 +2,7 @@ import pickle
 from typing import List
 
 import events as e
-from q_helpers import get_legal_actions, reward_from_events, ACTS, N_ACTIONS, N_STATES, ACT_BITS
+from q_helpers import get_legal_actions, state_to_tabular_features, reward_from_events, ACTS, N_ACTIONS, N_STATES, ACT_BITS
 import numpy as np
 
 import os
@@ -23,7 +23,8 @@ def setup_training(self):
     self.agent.start_game(is_training=True)
     self.iteration = 0
     self.game = 0
-    self.cum_rewards = 0
+    self.chunk_idx = 0
+    self.cumulative_reward = 0
 
 
 
@@ -47,7 +48,8 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     self.logger.debug(f'Encountered game event(s) {", ".join(map(repr, events))} in step {new_game_state["step"]}')
 
     reward = reward_from_events(events)
-    self.cum_rewards += reward
+    self.cumulative_reward += reward
+
     # state_to_features is defined in callbacks.py
     self.agent.update(iteration = self.iteration,
                       state = old_game_state,
@@ -73,7 +75,7 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     self.logger.debug(f'Encountered event(s) {", ".join(map(repr, events))} in final step')
 
     reward = reward_from_events(events)
-    self.cum_rewards += reward
+    self.cumulative_reward += reward
 
     self.agent.update(iteration = self.iteration,
                       state = last_game_state,
@@ -84,25 +86,21 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     self.agent.final_update(reward = 0) # All the final rewards are handed out before, no additional reward is necessary
     self.agent.train()
 
-    if self.game % 50 == 0:
-        print("cum rew", self.cum_rewards, "exploration", self.agent.exploration)
+    if self.game % 250  == 0:
+        print(f"Reward: {self.cumulative_reward} Exploration: {self.agent.exploration:.2f}")
 
-
-    if self.game % 1000  == 0:
-        print("exploration", self.agent.exploration)
+    if self.game % 1999  == 0:
         # Save agent state, q_visits, and models
+        self.agent.save("./snapshots", base_name=f"experiment_{self.chunk_idx:02d}")
         self.agent.save("./snapshots", base_name="default")
-        self.agent.save("./snapshots", base_name="experiment_{self.chunk_idx:02d}")
 
         evaluate_agent(self.chunk_idx, "./")
         self.chunk_idx += 1
 
-    self.cum_rewards = 0
 
-
+    self.cumulative_reward = 0
     self.iteration += 1
     self.game += 1
-
 
 
 
@@ -114,9 +112,8 @@ def evaluate_agent(chunk_idx, out_dir):
     cmd = [
         "python3", "../../main.py",
         "play",
-        "--agents", "cnn_coingrabber",
-        "--scenario", "coin-heaven",
-        "--n-rounds", "50",
+        "--agents", "cnn_allstar_duel", "rule_based_agent", "peaceful_agent", "tq_representator",
+        "--n-rounds", "100",
         "--train", "0",
         "--no-gui",
         "--save-stats", stats_file,

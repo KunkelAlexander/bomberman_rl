@@ -86,10 +86,10 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     self.agent.final_update(reward = 0) # All the final rewards are handed out before, no additional reward is necessary
     self.agent.train()
 
-    if self.game % 50  == 0:
+    if self.game % 250  == 0:
         print(f"Reward: {self.cumulative_reward} Exploration: {self.agent.exploration:.2f}")
 
-    if self.game % 999  == 0:
+    if self.game % 1999  == 0:
         # Save agent state, q_visits, and models
         self.agent.save("./snapshots", base_name=f"experiment_{self.chunk_idx:02d}")
         self.agent.save("./snapshots", base_name="default")
@@ -112,9 +112,8 @@ def evaluate_agent(chunk_idx, out_dir):
     cmd = [
         "python3", "../../main.py",
         "play",
-        "--agents", "cnn_cratehero",
-        "--scenario", "loot-crate",
-        "--n-rounds", "50",
+        "--agents", "dqn_allstar_duel", "rule_based_agent", "peaceful_agent", "tq_representator",
+        "--n-rounds", "100",
         "--train", "0",
         "--no-gui",
         "--save-stats", stats_file,

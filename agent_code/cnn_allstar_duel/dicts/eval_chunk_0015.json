@@ -1,654 +1,654 @@
 {
     "by_agent": {
         "cnn_allstar_duel": {
-            "bombs": 3873,
-            "coins": 304,
-            "crates": 653,
-            "invalid": 245,
-            "kills": 92,
-            "moves": 23204,
+            "bombs": 4352,
+            "coins": 321,
+            "crates": 735,
+            "invalid": 193,
+            "kills": 72,
+            "moves": 24603,
             "rounds": 100,
-            "score": 764,
-            "steps": 29364,
-            "suicides": 19,
-            "time": 40.17762327194214
+            "score": 681,
+            "steps": 31020,
+            "suicides": 17,
+            "time": 35.64243292808533
         },
         "peaceful_agent": {
-            "coins": 26,
-            "invalid": 2050,
-            "moves": 1570,
+            "coins": 32,
+            "invalid": 1885,
+            "moves": 1335,
             "rounds": 100,
-            "score": 26,
-            "steps": 3620,
-            "time": 0.17312002182006836
+            "score": 32,
+            "steps": 3220,
+            "time": 0.15256595611572266
         },
         "rule_based_agent": {
-            "bombs": 670,
-            "coins": 195,
-            "crates": 579,
-            "invalid": 404,
-            "kills": 36,
-            "moves": 7083,
+            "bombs": 756,
+            "coins": 190,
+            "crates": 566,
+            "invalid": 474,
+            "kills": 38,
+            "moves": 8646,
             "rounds": 100,
-            "score": 375,
-            "steps": 8386,
-            "suicides": 39,
-            "time": 4.266827583312988
+            "score": 380,
+            "steps": 10176,
+            "suicides": 41,
+            "time": 5.717647552490234
         },
         "tq_representator": {
-            "bombs": 1230,
-            "coins": 350,
-            "crates": 817,
-            "invalid": 404,
-            "kills": 53,
-            "moves": 13096,
+            "bombs": 1358,
+            "coins": 342,
+            "crates": 799,
+            "invalid": 364,
+            "kills": 64,
+            "moves": 18209,
             "rounds": 100,
-            "score": 615,
-            "steps": 15027,
-            "suicides": 48,
-            "time": 7.225372791290283
+            "score": 662,
+            "steps": 20259,
+            "suicides": 39,
+            "time": 9.544111490249634
         }
     },
     "by_round": {
-        "chunk_15 | Round 01 (2025-09-27 03-30-34)": {
-            "coins": 9,
-            "kills": 3,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 02 (2025-09-27 03-30-34)": {
-            "coins": 9,
-            "kills": 3,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 03 (2025-09-27 03-30-35)": {
+        "chunk_15 | Round 01 (2025-09-27 21-22-26)": {
             "coins": 9,
             "kills": 1,
-            "steps": 400,
-            "suicides": 2
-        },
-        "chunk_15 | Round 04 (2025-09-27 03-30-36)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 1
-        },
-        "chunk_15 | Round 05 (2025-09-27 03-30-37)": {
-            "coins": 8,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 1
-        },
-        "chunk_15 | Round 06 (2025-09-27 03-30-37)": {
-            "coins": 9,
-            "kills": 1,
-            "steps": 118,
-            "suicides": 2
-        },
-        "chunk_15 | Round 07 (2025-09-27 03-30-38)": {
-            "coins": 3,
-            "kills": 1,
-            "steps": 400,
-            "suicides": 2
-        },
-        "chunk_15 | Round 08 (2025-09-27 03-30-38)": {
-            "coins": 9,
-            "kills": 3,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 09 (2025-09-27 03-30-39)": {
-            "coins": 9,
-            "kills": 1,
-            "steps": 400,
-            "suicides": 2
-        },
-        "chunk_15 | Round 10 (2025-09-27 03-30-39)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 1
-        },
-        "chunk_15 | Round 100 (2025-09-27 03-31-30)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 106,
-            "suicides": 1
-        },
-        "chunk_15 | Round 11 (2025-09-27 03-30-40)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 12 (2025-09-27 03-30-41)": {
-            "coins": 9,
-            "kills": 3,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 13 (2025-09-27 03-30-42)": {
-            "coins": 9,
-            "kills": 1,
-            "steps": 400,
-            "suicides": 2
-        },
-        "chunk_15 | Round 14 (2025-09-27 03-30-42)": {
-            "coins": 9,
-            "kills": 1,
-            "steps": 82,
-            "suicides": 2
-        },
-        "chunk_15 | Round 15 (2025-09-27 03-30-43)": {
-            "coins": 9,
-            "kills": 1,
-            "steps": 87,
-            "suicides": 2
-        },
-        "chunk_15 | Round 16 (2025-09-27 03-30-43)": {
-            "coins": 9,
-            "kills": 1,
-            "steps": 400,
-            "suicides": 1
-        },
-        "chunk_15 | Round 17 (2025-09-27 03-30-44)": {
-            "coins": 7,
-            "kills": 1,
-            "steps": 400,
-            "suicides": 2
-        },
-        "chunk_15 | Round 18 (2025-09-27 03-30-44)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 19 (2025-09-27 03-30-45)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 2
-        },
-        "chunk_15 | Round 20 (2025-09-27 03-30-46)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 1
-        },
-        "chunk_15 | Round 21 (2025-09-27 03-30-47)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 1
-        },
-        "chunk_15 | Round 22 (2025-09-27 03-30-47)": {
-            "coins": 8,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 2
-        },
-        "chunk_15 | Round 23 (2025-09-27 03-30-48)": {
-            "coins": 9,
-            "kills": 3,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 24 (2025-09-27 03-30-49)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 64,
-            "suicides": 1
-        },
-        "chunk_15 | Round 25 (2025-09-27 03-30-49)": {
-            "coins": 9,
-            "kills": 3,
-            "steps": 400,
-            "suicides": 1
-        },
-        "chunk_15 | Round 26 (2025-09-27 03-30-50)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 27 (2025-09-27 03-30-50)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 1
-        },
-        "chunk_15 | Round 28 (2025-09-27 03-30-51)": {
-            "coins": 9,
-            "kills": 2,
             "steps": 61,
-            "suicides": 1
+            "suicides": 2
         },
-        "chunk_15 | Round 29 (2025-09-27 03-30-51)": {
-            "coins": 3,
+        "chunk_15 | Round 02 (2025-09-27 21-22-27)": {
+            "coins": 9,
             "kills": 1,
             "steps": 400,
             "suicides": 2
         },
-        "chunk_15 | Round 30 (2025-09-27 03-30-51)": {
+        "chunk_15 | Round 03 (2025-09-27 21-22-27)": {
             "coins": 9,
             "kills": 1,
-            "steps": 52,
-            "suicides": 2
-        },
-        "chunk_15 | Round 31 (2025-09-27 03-30-51)": {
-            "coins": 9,
-            "kills": 2,
             "steps": 400,
             "suicides": 1
         },
-        "chunk_15 | Round 32 (2025-09-27 03-30-52)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 1
-        },
-        "chunk_15 | Round 33 (2025-09-27 03-30-53)": {
+        "chunk_15 | Round 04 (2025-09-27 21-22-28)": {
             "coins": 9,
             "kills": 3,
-            "steps": 124,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 05 (2025-09-27 21-22-29)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 358,
+            "suicides": 1
+        },
+        "chunk_15 | Round 06 (2025-09-27 21-22-29)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
             "suicides": 0
         },
-        "chunk_15 | Round 34 (2025-09-27 03-30-53)": {
+        "chunk_15 | Round 07 (2025-09-27 21-22-30)": {
+            "coins": 9,
+            "kills": 1,
+            "steps": 173,
+            "suicides": 2
+        },
+        "chunk_15 | Round 08 (2025-09-27 21-22-31)": {
             "coins": 7,
-            "kills": 0,
+            "kills": 2,
             "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 09 (2025-09-27 21-22-31)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 0
+        },
+        "chunk_15 | Round 10 (2025-09-27 21-22-32)": {
+            "coins": 9,
+            "kills": 1,
+            "steps": 359,
             "suicides": 2
         },
-        "chunk_15 | Round 35 (2025-09-27 03-30-54)": {
+        "chunk_15 | Round 100 (2025-09-27 21-23-23)": {
             "coins": 9,
-            "kills": 2,
-            "steps": 66,
+            "kills": 1,
+            "steps": 141,
+            "suicides": 2
+        },
+        "chunk_15 | Round 11 (2025-09-27 21-22-33)": {
+            "coins": 9,
+            "kills": 1,
+            "steps": 400,
             "suicides": 1
         },
-        "chunk_15 | Round 36 (2025-09-27 03-30-54)": {
+        "chunk_15 | Round 12 (2025-09-27 21-22-33)": {
             "coins": 9,
-            "kills": 3,
+            "kills": 2,
             "steps": 400,
             "suicides": 0
         },
-        "chunk_15 | Round 37 (2025-09-27 03-30-55)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 1
-        },
-        "chunk_15 | Round 38 (2025-09-27 03-30-56)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 129,
-            "suicides": 1
-        },
-        "chunk_15 | Round 39 (2025-09-27 03-30-56)": {
+        "chunk_15 | Round 13 (2025-09-27 21-22-34)": {
             "coins": 9,
             "kills": 3,
             "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 14 (2025-09-27 21-22-35)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 15 (2025-09-27 21-22-35)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 68,
+            "suicides": 1
+        },
+        "chunk_15 | Round 16 (2025-09-27 21-22-35)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
             "suicides": 0
         },
-        "chunk_15 | Round 40 (2025-09-27 03-30-57)": {
+        "chunk_15 | Round 17 (2025-09-27 21-22-36)": {
             "coins": 9,
             "kills": 2,
             "steps": 400,
             "suicides": 1
         },
-        "chunk_15 | Round 41 (2025-09-27 03-30-57)": {
+        "chunk_15 | Round 18 (2025-09-27 21-22-37)": {
+            "coins": 7,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 19 (2025-09-27 21-22-37)": {
+            "coins": 9,
+            "kills": 1,
+            "steps": 162,
+            "suicides": 2
+        },
+        "chunk_15 | Round 20 (2025-09-27 21-22-38)": {
             "coins": 9,
             "kills": 2,
             "steps": 400,
             "suicides": 1
         },
-        "chunk_15 | Round 42 (2025-09-27 03-30-58)": {
-            "coins": 8,
+        "chunk_15 | Round 21 (2025-09-27 21-22-38)": {
+            "coins": 9,
+            "kills": 1,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 22 (2025-09-27 21-22-39)": {
+            "coins": 9,
             "kills": 1,
             "steps": 400,
             "suicides": 2
         },
-        "chunk_15 | Round 43 (2025-09-27 03-30-59)": {
+        "chunk_15 | Round 23 (2025-09-27 21-22-39)": {
             "coins": 9,
             "kills": 2,
+            "steps": 400,
+            "suicides": 0
+        },
+        "chunk_15 | Round 24 (2025-09-27 21-22-40)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 25 (2025-09-27 21-22-41)": {
+            "coins": 9,
+            "kills": 1,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 26 (2025-09-27 21-22-42)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 27 (2025-09-27 21-22-42)": {
+            "coins": 9,
+            "kills": 1,
+            "steps": 64,
+            "suicides": 2
+        },
+        "chunk_15 | Round 28 (2025-09-27 21-22-42)": {
+            "coins": 9,
+            "kills": 1,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 29 (2025-09-27 21-22-43)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 30 (2025-09-27 21-22-43)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 294,
+            "suicides": 1
+        },
+        "chunk_15 | Round 31 (2025-09-27 21-22-44)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 0
+        },
+        "chunk_15 | Round 32 (2025-09-27 21-22-45)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 33 (2025-09-27 21-22-45)": {
+            "coins": 9,
+            "kills": 1,
+            "steps": 400,
+            "suicides": 2
+        },
+        "chunk_15 | Round 34 (2025-09-27 21-22-46)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 0
+        },
+        "chunk_15 | Round 35 (2025-09-27 21-22-47)": {
+            "coins": 9,
+            "kills": 1,
+            "steps": 400,
+            "suicides": 2
+        },
+        "chunk_15 | Round 36 (2025-09-27 21-22-47)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 0
+        },
+        "chunk_15 | Round 37 (2025-09-27 21-22-48)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 0
+        },
+        "chunk_15 | Round 38 (2025-09-27 21-22-49)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 39 (2025-09-27 21-22-50)": {
+            "coins": 9,
+            "kills": 1,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 40 (2025-09-27 21-22-51)": {
+            "coins": 9,
+            "kills": 3,
+            "steps": 154,
+            "suicides": 1
+        },
+        "chunk_15 | Round 41 (2025-09-27 21-22-51)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 52,
+            "suicides": 1
+        },
+        "chunk_15 | Round 42 (2025-09-27 21-22-51)": {
+            "coins": 9,
+            "kills": 1,
+            "steps": 400,
+            "suicides": 2
+        },
+        "chunk_15 | Round 43 (2025-09-27 21-22-52)": {
+            "coins": 7,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 2
+        },
+        "chunk_15 | Round 44 (2025-09-27 21-22-52)": {
+            "coins": 9,
+            "kills": 1,
+            "steps": 400,
+            "suicides": 2
+        },
+        "chunk_15 | Round 45 (2025-09-27 21-22-53)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 268,
+            "suicides": 1
+        },
+        "chunk_15 | Round 46 (2025-09-27 21-22-53)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 0
+        },
+        "chunk_15 | Round 47 (2025-09-27 21-22-54)": {
+            "coins": 9,
+            "kills": 3,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 48 (2025-09-27 21-22-54)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 0
+        },
+        "chunk_15 | Round 49 (2025-09-27 21-22-55)": {
+            "coins": 6,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 50 (2025-09-27 21-22-56)": {
+            "coins": 9,
+            "kills": 3,
+            "steps": 76,
+            "suicides": 0
+        },
+        "chunk_15 | Round 51 (2025-09-27 21-22-56)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 0
+        },
+        "chunk_15 | Round 52 (2025-09-27 21-22-57)": {
+            "coins": 9,
+            "kills": 3,
+            "steps": 127,
+            "suicides": 0
+        },
+        "chunk_15 | Round 53 (2025-09-27 21-22-57)": {
+            "coins": 9,
+            "kills": 1,
+            "steps": 76,
+            "suicides": 2
+        },
+        "chunk_15 | Round 54 (2025-09-27 21-22-57)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 104,
+            "suicides": 1
+        },
+        "chunk_15 | Round 55 (2025-09-27 21-22-57)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 0
+        },
+        "chunk_15 | Round 56 (2025-09-27 21-22-58)": {
+            "coins": 7,
+            "kills": 1,
+            "steps": 400,
+            "suicides": 2
+        },
+        "chunk_15 | Round 57 (2025-09-27 21-22-58)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 58 (2025-09-27 21-22-59)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 0
+        },
+        "chunk_15 | Round 59 (2025-09-27 21-23-00)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 0
+        },
+        "chunk_15 | Round 60 (2025-09-27 21-23-00)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 0
+        },
+        "chunk_15 | Round 61 (2025-09-27 21-23-01)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 62 (2025-09-27 21-23-02)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 92,
+            "suicides": 1
+        },
+        "chunk_15 | Round 63 (2025-09-27 21-23-02)": {
+            "coins": 9,
+            "kills": 3,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 64 (2025-09-27 21-23-03)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 65 (2025-09-27 21-23-03)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 0
+        },
+        "chunk_15 | Round 66 (2025-09-27 21-23-04)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 60,
+            "suicides": 1
+        },
+        "chunk_15 | Round 67 (2025-09-27 21-23-04)": {
+            "coins": 9,
+            "kills": 1,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 68 (2025-09-27 21-23-05)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 94,
+            "suicides": 2
+        },
+        "chunk_15 | Round 69 (2025-09-27 21-23-05)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 130,
+            "suicides": 1
+        },
+        "chunk_15 | Round 70 (2025-09-27 21-23-05)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 0
+        },
+        "chunk_15 | Round 71 (2025-09-27 21-23-06)": {
+            "coins": 9,
+            "kills": 1,
+            "steps": 400,
+            "suicides": 2
+        },
+        "chunk_15 | Round 72 (2025-09-27 21-23-07)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 0
+        },
+        "chunk_15 | Round 73 (2025-09-27 21-23-07)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 74 (2025-09-27 21-23-08)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 157,
+            "suicides": 1
+        },
+        "chunk_15 | Round 75 (2025-09-27 21-23-08)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 0
+        },
+        "chunk_15 | Round 76 (2025-09-27 21-23-09)": {
+            "coins": 9,
+            "kills": 3,
             "steps": 110,
             "suicides": 1
         },
-        "chunk_15 | Round 44 (2025-09-27 03-30-59)": {
+        "chunk_15 | Round 77 (2025-09-27 21-23-09)": {
             "coins": 9,
             "kills": 1,
             "steps": 400,
             "suicides": 1
         },
-        "chunk_15 | Round 45 (2025-09-27 03-31-00)": {
-            "coins": 9,
-            "kills": 1,
-            "steps": 400,
-            "suicides": 1
-        },
-        "chunk_15 | Round 46 (2025-09-27 03-31-00)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 1
-        },
-        "chunk_15 | Round 47 (2025-09-27 03-31-01)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 46,
-            "suicides": 1
-        },
-        "chunk_15 | Round 48 (2025-09-27 03-31-01)": {
+        "chunk_15 | Round 78 (2025-09-27 21-23-10)": {
             "coins": 9,
             "kills": 2,
             "steps": 400,
             "suicides": 0
         },
-        "chunk_15 | Round 49 (2025-09-27 03-31-02)": {
+        "chunk_15 | Round 79 (2025-09-27 21-23-11)": {
             "coins": 9,
             "kills": 2,
             "steps": 400,
             "suicides": 0
         },
-        "chunk_15 | Round 50 (2025-09-27 03-31-03)": {
-            "coins": 9,
-            "kills": 1,
-            "steps": 400,
-            "suicides": 2
-        },
-        "chunk_15 | Round 51 (2025-09-27 03-31-03)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 1
-        },
-        "chunk_15 | Round 52 (2025-09-27 03-31-04)": {
-            "coins": 9,
-            "kills": 1,
-            "steps": 98,
-            "suicides": 2
-        },
-        "chunk_15 | Round 53 (2025-09-27 03-31-04)": {
+        "chunk_15 | Round 80 (2025-09-27 21-23-12)": {
             "coins": 9,
             "kills": 2,
             "steps": 400,
             "suicides": 0
         },
-        "chunk_15 | Round 54 (2025-09-27 03-31-05)": {
-            "coins": 9,
-            "kills": 1,
-            "steps": 109,
-            "suicides": 2
-        },
-        "chunk_15 | Round 55 (2025-09-27 03-31-05)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 2
-        },
-        "chunk_15 | Round 56 (2025-09-27 03-31-06)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 57 (2025-09-27 03-31-07)": {
-            "coins": 9,
-            "kills": 1,
-            "steps": 400,
-            "suicides": 2
-        },
-        "chunk_15 | Round 58 (2025-09-27 03-31-07)": {
-            "coins": 9,
-            "kills": 1,
-            "steps": 186,
-            "suicides": 2
-        },
-        "chunk_15 | Round 59 (2025-09-27 03-31-08)": {
+        "chunk_15 | Round 81 (2025-09-27 21-23-12)": {
             "coins": 9,
             "kills": 1,
             "steps": 400,
             "suicides": 1
         },
-        "chunk_15 | Round 60 (2025-09-27 03-31-09)": {
-            "coins": 9,
-            "kills": 3,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 61 (2025-09-27 03-31-09)": {
+        "chunk_15 | Round 82 (2025-09-27 21-23-13)": {
             "coins": 9,
             "kills": 1,
-            "steps": 164,
+            "steps": 317,
             "suicides": 2
         },
-        "chunk_15 | Round 62 (2025-09-27 03-31-10)": {
-            "coins": 9,
-            "kills": 1,
-            "steps": 149,
-            "suicides": 2
-        },
-        "chunk_15 | Round 63 (2025-09-27 03-31-10)": {
-            "coins": 9,
-            "kills": 1,
-            "steps": 400,
-            "suicides": 2
-        },
-        "chunk_15 | Round 64 (2025-09-27 03-31-11)": {
+        "chunk_15 | Round 83 (2025-09-27 21-23-14)": {
             "coins": 9,
             "kills": 2,
-            "steps": 197,
+            "steps": 76,
             "suicides": 1
         },
-        "chunk_15 | Round 65 (2025-09-27 03-31-11)": {
+        "chunk_15 | Round 84 (2025-09-27 21-23-14)": {
+            "coins": 8,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 85 (2025-09-27 21-23-14)": {
+            "coins": 9,
+            "kills": 1,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 86 (2025-09-27 21-23-15)": {
             "coins": 9,
             "kills": 2,
             "steps": 400,
             "suicides": 1
         },
-        "chunk_15 | Round 66 (2025-09-27 03-31-12)": {
+        "chunk_15 | Round 87 (2025-09-27 21-23-16)": {
             "coins": 9,
             "kills": 2,
+            "steps": 400,
+            "suicides": 0
+        },
+        "chunk_15 | Round 88 (2025-09-27 21-23-16)": {
+            "coins": 9,
+            "kills": 1,
             "steps": 400,
             "suicides": 1
         },
-        "chunk_15 | Round 67 (2025-09-27 03-31-13)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 68 (2025-09-27 03-31-13)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 69 (2025-09-27 03-31-14)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 70 (2025-09-27 03-31-15)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 1
-        },
-        "chunk_15 | Round 71 (2025-09-27 03-31-15)": {
+        "chunk_15 | Round 89 (2025-09-27 21-23-17)": {
             "coins": 9,
             "kills": 1,
-            "steps": 64,
+            "steps": 54,
             "suicides": 2
         },
-        "chunk_15 | Round 72 (2025-09-27 03-31-16)": {
+        "chunk_15 | Round 90 (2025-09-27 21-23-17)": {
             "coins": 9,
             "kills": 1,
-            "steps": 183,
+            "steps": 400,
             "suicides": 2
         },
-        "chunk_15 | Round 73 (2025-09-27 03-31-16)": {
+        "chunk_15 | Round 91 (2025-09-27 21-23-18)": {
+            "coins": 9,
+            "kills": 2,
+            "steps": 400,
+            "suicides": 0
+        },
+        "chunk_15 | Round 92 (2025-09-27 21-23-19)": {
+            "coins": 9,
+            "kills": 1,
+            "steps": 400,
+            "suicides": 2
+        },
+        "chunk_15 | Round 93 (2025-09-27 21-23-19)": {
+            "coins": 9,
+            "kills": 1,
+            "steps": 71,
+            "suicides": 2
+        },
+        "chunk_15 | Round 94 (2025-09-27 21-23-19)": {
             "coins": 6,
             "kills": 1,
             "steps": 400,
             "suicides": 2
         },
-        "chunk_15 | Round 74 (2025-09-27 03-31-17)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 75 (2025-09-27 03-31-17)": {
-            "coins": 7,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 1
-        },
-        "chunk_15 | Round 76 (2025-09-27 03-31-18)": {
-            "coins": 8,
-            "kills": 1,
-            "steps": 400,
-            "suicides": 2
-        },
-        "chunk_15 | Round 77 (2025-09-27 03-31-19)": {
+        "chunk_15 | Round 95 (2025-09-27 21-23-20)": {
             "coins": 9,
             "kills": 1,
             "steps": 400,
             "suicides": 2
         },
-        "chunk_15 | Round 78 (2025-09-27 03-31-19)": {
-            "coins": 9,
-            "kills": 4,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 79 (2025-09-27 03-31-20)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 184,
-            "suicides": 2
-        },
-        "chunk_15 | Round 80 (2025-09-27 03-31-20)": {
-            "coins": 9,
-            "kills": 3,
-            "steps": 66,
-            "suicides": 0
-        },
-        "chunk_15 | Round 81 (2025-09-27 03-31-20)": {
-            "coins": 9,
-            "kills": 1,
-            "steps": 293,
-            "suicides": 2
-        },
-        "chunk_15 | Round 82 (2025-09-27 03-31-21)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 1
-        },
-        "chunk_15 | Round 83 (2025-09-27 03-31-21)": {
-            "coins": 9,
-            "kills": 1,
-            "steps": 105,
-            "suicides": 2
-        },
-        "chunk_15 | Round 84 (2025-09-27 03-31-22)": {
+        "chunk_15 | Round 96 (2025-09-27 21-23-20)": {
             "coins": 9,
             "kills": 3,
             "steps": 400,
             "suicides": 0
         },
-        "chunk_15 | Round 85 (2025-09-27 03-31-22)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 86 (2025-09-27 03-31-23)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 89,
-            "suicides": 1
-        },
-        "chunk_15 | Round 87 (2025-09-27 03-31-23)": {
+        "chunk_15 | Round 97 (2025-09-27 21-23-21)": {
             "coins": 9,
             "kills": 1,
-            "steps": 79,
+            "steps": 400,
+            "suicides": 1
+        },
+        "chunk_15 | Round 98 (2025-09-27 21-23-22)": {
+            "coins": 9,
+            "kills": 1,
+            "steps": 118,
             "suicides": 2
         },
-        "chunk_15 | Round 88 (2025-09-27 03-31-23)": {
+        "chunk_15 | Round 99 (2025-09-27 21-23-22)": {
             "coins": 9,
             "kills": 2,
             "steps": 400,
             "suicides": 1
-        },
-        "chunk_15 | Round 89 (2025-09-27 03-31-24)": {
-            "coins": 9,
-            "kills": 3,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 90 (2025-09-27 03-31-25)": {
-            "coins": 9,
-            "kills": 3,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 91 (2025-09-27 03-31-25)": {
-            "coins": 9,
-            "kills": 1,
-            "steps": 255,
-            "suicides": 2
-        },
-        "chunk_15 | Round 92 (2025-09-27 03-31-26)": {
-            "coins": 9,
-            "kills": 1,
-            "steps": 400,
-            "suicides": 2
-        },
-        "chunk_15 | Round 93 (2025-09-27 03-31-27)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 192,
-            "suicides": 1
-        },
-        "chunk_15 | Round 94 (2025-09-27 03-31-27)": {
-            "coins": 9,
-            "kills": 1,
-            "steps": 400,
-            "suicides": 1
-        },
-        "chunk_15 | Round 95 (2025-09-27 03-31-28)": {
-            "coins": 9,
-            "kills": 3,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 96 (2025-09-27 03-31-29)": {
-            "coins": 9,
-            "kills": 3,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 97 (2025-09-27 03-31-29)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 400,
-            "suicides": 0
-        },
-        "chunk_15 | Round 98 (2025-09-27 03-31-30)": {
-            "coins": 9,
-            "kills": 2,
-            "steps": 70,
-            "suicides": 1
-        },
-        "chunk_15 | Round 99 (2025-09-27 03-31-30)": {
-            "coins": 9,
-            "kills": 1,
-            "steps": 112,
-            "suicides": 2
         }
     }
 }

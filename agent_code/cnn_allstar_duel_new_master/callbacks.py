@@ -17,7 +17,7 @@ base_config = {
     "n_eval"              : 100,    # Number of evaluation episodes every eval_freq training episodes
     "eval_freq"           : 100,
     "train_freq"          : 1,      # Train models every train_freq training episodes
-    "grad_steps"          : 2,      # Number of gradient updates per training step
+    "grad_steps"          : 4,      # Number of gradient updates per training step
     "discount"            : 0.8,    # Discount in all Q learning algorithms
     "learning_rate_decay" : 1,
     "exploration"         : 1.0,    # Initial exploration rate
@@ -26,13 +26,14 @@ base_config = {
     "learning_rate"       : 3e-4,
     "debug"               : False,  # Print loss and evaluation information during training
     "plot_debug"          : False,  # Plot game outcomes
-    "batch_size"          : 128,    # Batch size for DQN algorithm
+    "batch_size"          : 64,    # Batch size for DQN algorithm
     "board_encoding"      : "encoding_cnn",
-    "replay_buffer_size"  : 10000,  # Replay buffer for DQN algorithm
-    "replay_buffer_min"   : 1000,   # minimum size before we start training
+    "replay_buffer_size"  : 100000,  # Replay buffer for DQN algorithm
+    "replay_buffer_min"   : 10000,   # minimum size before we start training
     "target_update_tau"   : 0.1,    # Weight for update in dual DQN architecture target = (1 - tau) * target + tau * online
     "target_update_freq"  : 10,     # Update target network every n episodes
     "target_update_mode"  : "hard", # "hard": update every target_update freq or "soft": update using Polyakov rule with target_update_tau
+    "prb_beta_steps"      : 2e5
 }
 
 
@@ -52,33 +53,35 @@ def setup(self):
 
     :param self: This object is passed to all callbacks and you can set arbitrary values.
     """
+    def build_cnn(input_shape, num_actions, lr=1e-4, clipnorm=10.0):
+        inputs = layers.Input(shape=input_shape)
+        x = layers.Conv2D(64, 3, padding="same", activation="relu")(inputs)
+        x = layers.Conv2D(64, 3, padding="same", activation="relu")(x)
+        x = layers.Conv2D(64, 3, padding="same", activation="relu")(x)
+        x = layers.GlobalAveragePooling2D()(x)
 
+        x = layers.Flatten()(x)                 # keep spatial info
+        x = layers.Dense(128, activation="relu")(x)
 
-    def build_cnn_dqn_model(input_shape, num_actions):
-        """
-        CNN DQN for Bomberman-like 9x9 grid inputs.
+        # value
+        v = layers.Dense(128, activation="relu")(x)
+        v = layers.Dense(1)(v)
 
-        input_shape: (rows, cols, channels), e.g. (9, 9, 11)
-        num_actions: number of discrete actions
-        """
-        inputs = layers.Input(shape=input_shape)  # (9, 9, channels)
+        # advantage
+        a = layers.Dense(128, activation="relu")(x)
+        a = layers.Dense(num_actions)(a)
 
-        # Conv stack
-        x = layers.Conv2D(16, kernel_size=3, padding="same")(inputs)  # fewer filters
-        x = layers.ReLU()(x)
+        # dueling combine (use Lambda to stay on-graph)
+        a_mean = layers.Lambda(lambda t: tf.reduce_mean(t, axis=1, keepdims=True))(a)
+        q = layers.Add()([v, layers.Subtract()([a, a_mean])])
 
-        x = layers.Conv2D(32, kernel_size=3, padding="same")(x)
-        x = layers.ReLU()(x)
-
-        # Flatten and dense head
-        x = layers.Flatten()(x)                     # 9*9*32 = 2592 units
-        x = layers.Dense(64, activation="relu")(x)  # small dense layer
-
-        # Output Q-values for each action
-        outputs = layers.Dense(num_actions, activation="linear")(x)
-
-        model = models.Model(inputs=inputs, outputs=outputs)
+        model = tf.keras.Model(inputs, q)
+        model.compile(
+            optimizer=tf.keras.optimizers.Adam(learning_rate=lr, clipnorm=clipnorm),
+            loss=tf.keras.losses.Huber()
+        )
         return model
+
 
     self.agent = DeepQAgent(
             agent_id=0,
@@ -87,13 +90,12 @@ def setup(self):
             config=base_config,
     )
 
-    self.agent.online_model = build_cnn_dqn_model(self.agent.input_shape, self.agent.n_actions)
-    self.agent.online_model.compile(optimizer=tf.keras.optimizers.Adam(base_config["learning_rate"]), loss="mse")
-    self.agent.target_model = build_cnn_dqn_model(self.agent.input_shape, self.agent.n_actions)
+    self.agent.online_model = build_cnn(self.agent.input_shape, self.agent.n_actions, lr=base_config["learning_rate"])
+    self.agent.target_model = build_cnn(self.agent.input_shape, self.agent.n_actions, lr=base_config["learning_rate"])
 
     if not self.train:
         # Load everything back
-        self.agent.load("./snapshots", base_name="experiment_01")
+        self.agent.load("./snapshots", base_name="default")
 
 
 

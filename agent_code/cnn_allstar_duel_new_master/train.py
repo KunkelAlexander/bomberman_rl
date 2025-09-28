@@ -112,7 +112,7 @@ def evaluate_agent(chunk_idx, out_dir):
     cmd = [
         "python3", "../../main.py",
         "play",
-        "--agents", "cnn_allstar_duel_mini", "rule_based_agent", "peaceful_agent", "rule_based_agent",
+        "--agents", "cnn_allstar_duel", "rule_based_agent", "peaceful_agent", "tq_representator",
         "--n-rounds", "100",
         "--train", "0",
         "--no-gui",

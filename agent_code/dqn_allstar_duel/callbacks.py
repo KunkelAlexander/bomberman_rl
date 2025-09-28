@@ -22,17 +22,18 @@ base_config = {
     "learning_rate_decay" : 1,
     "exploration"         : 1.0,    # Initial exploration rate
     "exploration_decay"   : 1e-3,   # Decrease of exploration rate for every action
-    "exploration_min"     : 1e-2,
+    "exploration_min"     : 0.1,
     "learning_rate"       : 3e-4,
     "debug"               : False,  # Print loss and evaluation information during training
     "plot_debug"          : False,  # Plot game outcomes
-    "batch_size"          : 128,    # Batch size for DQN algorithm
+    "batch_size"          : 64,    # Batch size for DQN algorithm
     "board_encoding"      : "encoding_cnn",
     "replay_buffer_size"  : 100000,  # Replay buffer for DQN algorithm
     "replay_buffer_min"   : 10000,   # minimum size before we start training
     "target_update_tau"   : 0.1,    # Weight for update in dual DQN architecture target = (1 - tau) * target + tau * online
-    "target_update_freq"  : 30,     # Update target network every n episodes
+    "target_update_freq"  : 10,     # Update target network every n episodes
     "target_update_mode"  : "hard", # "hard": update every target_update freq or "soft": update using Polyakov rule with target_update_tau
+    "prb_beta_steps"      : 2e5
 }
 
 
@@ -52,27 +53,16 @@ def setup(self):
 
     :param self: This object is passed to all callbacks and you can set arbitrary values.
     """
-    def build_cnn(input_shape, num_actions, lr=1e-4, clipnorm=10.0):
+    def build_dqn(input_shape, num_actions, lr=1e-4, clipnorm=10.0):
         inputs = layers.Input(shape=input_shape)
-        # number_parameters = out_channels * (in_channels * kernel_h * kernel_w + 1)  # 1 for bias
-        # 1600 params
-        x = layers.Conv2D(16, 3, padding="same", activation="relu")(inputs) # (9, 9, 11) to (9, 9, 16)
-        # 4640 params
-        x = layers.Conv2D(32, 3, padding="same", activation="relu")(x) # (9, 9, 16) to (9, 9, 32)
-        # 18496 params
-        x = layers.Conv2D(64, 3, padding="same", activation="relu")(x) # (9, 9, 32) to (9, 9, 64)
-
-        # Average over channels
-        #x = tf.reduce_mean(x, axis=-1, keepdims=True)  # (9,9,1)
-        x = layers.Flatten()(x) # keep spatial info, 9*9*64 = 5184 features
-        # (output +1) * 128 params = 663680 params
+        x = layers.Flatten()(inputs)                 # keep spatial info
         x = layers.Dense(128, activation="relu")(x)
 
-        # value -  16512 params
+        # value
         v = layers.Dense(128, activation="relu")(x)
         v = layers.Dense(1)(v)
 
-        # advantage  -  16512 params
+        # advantage
         a = layers.Dense(128, activation="relu")(x)
         a = layers.Dense(num_actions)(a)
 
@@ -95,8 +85,8 @@ def setup(self):
             config=base_config,
     )
 
-    self.agent.online_model = build_cnn(self.agent.input_shape, self.agent.n_actions, lr=base_config["learning_rate"])
-    self.agent.target_model = build_cnn(self.agent.input_shape, self.agent.n_actions, lr=base_config["learning_rate"])
+    self.agent.online_model = build_dqn(self.agent.input_shape, self.agent.n_actions, lr=base_config["learning_rate"])
+    self.agent.target_model = build_dqn(self.agent.input_shape, self.agent.n_actions, lr=base_config["learning_rate"])
 
     if not self.train:
         # Load everything back

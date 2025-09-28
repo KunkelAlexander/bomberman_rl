@@ -33,8 +33,14 @@ base_config = {
     "target_update_tau"   : 0.1,    # Weight for update in dual DQN architecture target = (1 - tau) * target + tau * online
     "target_update_freq"  : 10,     # Update target network every n episodes
     "target_update_mode"  : "hard", # "hard": update every target_update freq or "soft": update using Polyakov rule with target_update_tau
+    "prb_beta_steps"      : 2e5
 }
 
+
+# Colab tensorflow does not like serialised lambda functions
+@tf.keras.utils.register_keras_serializable()
+def reduce_mean_axis_1(t):
+    return tf.reduce_mean(t, axis=1, keepdims=True)
 
 
 
@@ -70,7 +76,7 @@ def setup(self):
         a = layers.Dense(num_actions)(a)
 
         # dueling combine (use Lambda to stay on-graph)
-        a_mean = layers.Lambda(lambda t: tf.reduce_mean(t, axis=1, keepdims=True))(a)
+        a_mean = layers.Lambda(reduce_mean_axis_1, output_shape=(1,))(a)
         q = layers.Add()([v, layers.Subtract()([a, a_mean])])
 
         model = tf.keras.Model(inputs, q)
